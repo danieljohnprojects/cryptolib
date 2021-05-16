@@ -1,1 +1,10 @@
-from .set1 import Challenge01, Challenge02
+from .set1 import (
+    Challenge01, 
+    Challenge02, 
+    Challenge03, 
+    Challenge04, 
+    Challenge05, 
+    Challenge06, 
+    Challenge07, 
+    Challenge08
+)
