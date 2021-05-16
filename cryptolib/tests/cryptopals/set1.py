@@ -115,6 +115,14 @@ class Challenge05(Challenge):
 
     Encrypt a bunch of stuff using your repeating-key XOR function. Encrypt your mail. Encrypt your password file. Your .sig file. Get a feel for it. I promise,we aren't wasting your time with this. 
     """
+    plaintext = bytes(
+        b"Burning 'em, if you ain't quick and nimble\n"
+        b"I go crazy when I hear a cymbal"
+        )
+    key = bytes(b'ICE')
+    solution = bytes.fromhex('0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f')
+    def solve(self) -> bytes:
+        return cyclical_xor(self.key, self.plaintext)
 
 class Challenge06(Challenge):
     """
