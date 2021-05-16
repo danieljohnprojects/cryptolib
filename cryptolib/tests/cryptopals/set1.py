@@ -1,6 +1,13 @@
 from .Challenge import Challenge
+
+from cryptolib.cracks.substitution import decrypt_single_byte_xor
+
 from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64
+from cryptolib.utils.plain_scoring import score
+
+from .data import challenge04
+
 import unittest
 
 class Challenge01(Challenge):
@@ -57,6 +64,11 @@ class Challenge03(Challenge):
 
     How? Devise some method for "scoring" a piece of English plaintext. Character frequency is a good metric. Evaluate each output and choose the one with the best score. 
     """
+    cipher = bytes.fromhex('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
+    solution = bytes(b"Cooking MC's like a pound of bacon")
+
+    def solve(self) -> bytes:
+        return decrypt_single_byte_xor(cipher)
 
 class Challenge04(Challenge):
     """
@@ -70,7 +82,19 @@ class Challenge04(Challenge):
 
     (Your code from #3 should help.) 
     """
-
+    ctexts = challenge04.ciphertexts
+    solution = bytes(b'Now that the party is jumping\n')
+    
+    def solve(self) -> bytes:
+        plain = bytes(b'')
+        best_score = 1e10
+        for cipher in self.ctexts:
+            this_plain = decrypt_single_byte_xor(bytes.fromhex(cipher))
+            if (this_score := score(this_plain)) < best_score:
+                plain = this_plain
+                best_score = this_score
+        return plain
+    
 class Challenge05(Challenge):
     """
     Title:
