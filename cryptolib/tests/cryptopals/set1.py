@@ -18,7 +18,7 @@ class Challenge01(Challenge):
     solution = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t'
     
     def solve(self) -> str:
-        return hex_string_to_b64(self.input_str)[2:-1]
+        return hex_string_to_b64(self.input_str)
 
 class Challenge02(Challenge):
     """
