@@ -2,7 +2,7 @@
 Operations on byte objects.
 """
 
-def repeating_key_xor(key: bytes, message: bytes) -> bytes:
+def cyclical_xor(key: bytes, message: bytes) -> bytes:
     """
     Xors the key over the message cyclically.
 

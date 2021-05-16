@@ -1,5 +1,5 @@
 from .Challenge import Challenge
-from cryptolib.utils.byteops import repeating_key_xor
+from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64
 import unittest
 
@@ -41,7 +41,7 @@ class Challenge02(Challenge):
     solution = bytes.fromhex('746865206b696420646f6e277420706c6179')
     
     def solve(self) -> bytes:
-        return repeating_key_xor(self.key, self.message)
+        return cyclical_xor(self.key, self.message)
     
 class Challenge03(Challenge):
     """
