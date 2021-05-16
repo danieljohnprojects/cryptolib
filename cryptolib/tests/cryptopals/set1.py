@@ -1,12 +1,12 @@
 from .Challenge import Challenge
 
-from cryptolib.cracks.substitution import decrypt_single_byte_xor
+from cryptolib.cracks.substitution import decrypt_single_byte_xor, decrypt_repeating_key_xor
 
 from cryptolib.utils.byteops import cyclical_xor
-from cryptolib.utils.conversion import hex_string_to_b64
+from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import score
 
-from .data import challenge04
+from .data import challenge04, challenge06
 
 import unittest
 
@@ -68,7 +68,7 @@ class Challenge03(Challenge):
     solution = bytes(b"Cooking MC's like a pound of bacon")
 
     def solve(self) -> bytes:
-        return decrypt_single_byte_xor(cipher)
+        return decrypt_single_byte_xor(cipher)[0]
 
 class Challenge04(Challenge):
     """
@@ -89,7 +89,7 @@ class Challenge04(Challenge):
         plain = bytes(b'')
         best_score = 1e10
         for cipher in self.ctexts:
-            this_plain = decrypt_single_byte_xor(bytes.fromhex(cipher))
+            this_plain, _ = decrypt_single_byte_xor(bytes.fromhex(cipher))
             if (this_score := score(this_plain)) < best_score:
                 plain = this_plain
                 best_score = this_score
@@ -154,6 +154,11 @@ class Challenge06(Challenge):
 
     This code is going to turn out to be surprisingly useful later on. Breaking repeating-key XOR ("Vigenere") statistically is obviously an academic exercise, a "Crypto 101" thing. But more people "know how" to break it than can actually break it, and a similar technique breaks something much more important. 
     """
+    ciphertext = challenge06.cipher
+    solution = challenge06.solution
+    def solve(self) -> bytes:
+        c = bytes.fromhex(b64_string_to_hex(self.ciphertext))
+        return decrypt_repeating_key_xor(c, range(2, 40))[0]
 
 class Challenge07(Challenge):
     """
