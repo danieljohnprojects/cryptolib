@@ -29,5 +29,6 @@ typedef union AES_key
     uint32_t word_list[(ROUND_KEYS + 1) * WORDS_PER_ROUND_KEY];
 } AES_key;
 
-
-void initialise_key(uint32_t *initial_key, AES_key *expanded_key);
+uint32_t rotword(uint32_t word);
+uint32_t subword(uint32_t word);
+void initialise_key(uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key);

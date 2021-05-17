@@ -4,6 +4,17 @@
 
 #include <AES.h>
 
+void test_rotword()
+{
+    assert(rotword(0x01020304) == 0x02030401);
+}
+
+void test_subword()
+{
+    assert(subword(0x00010203) == 0x637c777b);
+    assert(subword(0x10111213) == 0xca82c97d);
+}
+
 /**
  * Runs tests for the AES key scheduler.
  */
@@ -69,12 +80,16 @@ void test_key_schedule()
     
     // Check that subsequent derived keys
     for (int round = 0; round < ROUND_KEYS + 1; round++)
-        for (int word = 0; round < WORDS_PER_ROUND_KEY; word++)
+        for (int word = 0; word < WORDS_PER_ROUND_KEY; word++)
             assert(key_schedule.schedule[round][word] == expected_answer[round][word]);
 }
 
 int main(void)
 {
+    test_rotword();
+    printf("Rotword test passed!\n");
+    test_subword();
+    printf("Subword test passed!\n");
     test_key_schedule();
     printf("Key schedule test passed!\n");
 }

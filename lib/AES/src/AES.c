@@ -40,6 +40,7 @@ static uint8_t sbox[] = {
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68,
     0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};
 static uint32_t rcon[] = {
+    0x00000000,
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 
     0x10000000, 0x20000000, 0x40000000, 0x80000000, 
     0x1b000000, 0x36000000};
@@ -54,9 +55,9 @@ static uint32_t rcon[] = {
  * 
  * @return The rotated word.
  */
-static inline uint32_t rotword(uint32_t word)
+uint32_t rotword(uint32_t word)
 {
-    return (word << BITS_PER_BYTE) & (word >> ((BYTES_PER_WORD - 1) * (BITS_PER_BYTE)));
+    return (word << BITS_PER_BYTE) ^ (word >> ((BYTES_PER_WORD - 1) * (BITS_PER_BYTE)));
 }
 
 /**
@@ -69,14 +70,14 @@ static inline uint32_t rotword(uint32_t word)
  * 
  * @return The substituted word.
  */
-static inline uint32_t subword(uint32_t word)
+uint32_t subword(uint32_t word)
 {
-    uint32_t b3 = sbox[word&0xff];
-    uint32_t b2 = sbox[word&0xff00 >> BITS_PER_BYTE];
-    uint32_t b1 = sbox[word&0xff0000 >> 2*BITS_PER_BYTE];
-    uint32_t b0 = sbox[word&0xff000000 >> 3*BITS_PER_BYTE];
+    uint32_t b3 = sbox[(word&0xff)];
+    uint32_t b2 = sbox[(word&0xff00) >> BITS_PER_BYTE];
+    uint32_t b1 = sbox[(word&0xff0000) >> 2*BITS_PER_BYTE];
+    uint32_t b0 = sbox[(word&0xff000000) >> 3*BITS_PER_BYTE];
 
-    return (b0 << 3*BITS_PER_BYTE) & (b1 << 2*BITS_PER_BYTE) & (b2 << BITS_PER_BYTE) & b3;
+    return (b0 << 3*BITS_PER_BYTE) ^ (b1 << 2*BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
 }
 
 /**
@@ -85,7 +86,7 @@ static inline uint32_t subword(uint32_t word)
  * @param initial_key   A pointer to a buffer of uint32_t's of length WORDS_PER_KEY
  * @param expanded_key  A pointer to an AES_key data structure that will hold the expanded key schedule. 
  */
-void initialise_key(uint32_t *initial_key, AES_key *expanded_key)
+void initialise_key(uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key)
 {
     // First copy the initial key across
     for (int i = 0; i < WORDS_PER_KEY; i++)
