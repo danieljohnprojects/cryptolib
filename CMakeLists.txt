@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+project(cryptolib VERSION 0.0.1)
+
+add_subdirectory(lib)
+add_subdirectory(test)
