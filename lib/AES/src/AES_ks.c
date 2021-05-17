@@ -1,3 +1,14 @@
+/**
+ * AES Key Schedule 
+ * 
+ * AES derives a sequence of keys from the initial key using rotation and 
+ * substitution operations on the individual words of the key. Each of the keys 
+ * derived in this way are applied at the beginning of an encryption round. The 
+ * key derivation function is slightly different depending on the key length. 
+ * 
+ * The key bit length is determined by a #define of AES128, AES192, or AES256.
+ */
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
