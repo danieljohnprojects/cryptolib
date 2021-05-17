@@ -4,6 +4,7 @@
 
 #include <AES.h>
 #include "AES_ks.h"
+#include "AES_sbox.h"
 
 void test_rotword()
 {
