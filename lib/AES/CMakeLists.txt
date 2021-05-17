@@ -30,18 +30,18 @@ add_executable(
     src/AES_ks_test.c
 )
 target_link_libraries(aes128_ks_test PRIVATE aes128)
-target_compile_options(aes128 PRIVATE "-g" "-Wall" "-Wextra")
+target_compile_options(aes128_ks_test PRIVATE "-g" "-Wall" "-Wextra")
 
 add_executable(
     aes192_ks_test
     src/AES_ks_test.c
 )
 target_link_libraries(aes192_ks_test PRIVATE aes192)
-target_compile_options(aes128 PRIVATE "-g" "-Wall" "-Wextra")
+target_compile_options(aes192_ks_test PRIVATE "-g" "-Wall" "-Wextra")
 
 add_executable(
     aes256_ks_test
     src/AES_ks_test.c
 )
 target_link_libraries(aes256_ks_test PRIVATE aes256)
-target_compile_options(aes128 PRIVATE "-g" "-Wall" "-Wextra")
+target_compile_options(aes256_ks_test PRIVATE "-g" "-Wall" "-Wextra")
