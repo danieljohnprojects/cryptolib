@@ -2,3 +2,4 @@ venv/
 .vscode/
 cryptolib.egg-info/
 **/__pycache__
+build/
