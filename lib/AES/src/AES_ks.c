@@ -20,14 +20,14 @@
 /////////////////// KEY SCHEDULING //
 
 // Round constants
-static uint32_t rcon[] = {
+static const uint32_t rcon[] = {
     0x00000000,
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 
     0x10000000, 0x20000000, 0x40000000, 0x80000000, 
     0x1b000000, 0x36000000};
 
 /**
- * Rotates a word one byte to the left.
+ * Rotates a word to the left by a byte.
  * 
  * That is:
  * [b0,b1,b2,b3] -> [b1,b2,b3,b0]
@@ -38,7 +38,9 @@ static uint32_t rcon[] = {
  */
 uint32_t rotword(uint32_t word)
 {
-    return (word << BITS_PER_BYTE) ^ (word >> ((BYTES_PER_WORD - 1) * (BITS_PER_BYTE)));
+    uint32_t top = word << (BITS_PER_BYTE);
+    uint32_t bottom = word >> (BITS_PER_BYTE * (BYTES_PER_WORD - 1));
+    return top ^ bottom;
 }
 
 /**
@@ -55,7 +57,7 @@ void initialise_key(const uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded
     
     // Then compute the resulting keyschedule
     #ifndef AES256
-    for (int i = WORDS_PER_KEY; i < WORDS_PER_ROUND_KEY*(ROUND_KEYS + 1); i++)
+    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK*(ROUND_KEYS + 1); i++)
     {
         if (i%WORDS_PER_KEY == 0)
             expanded_key->word_list[i] = 
@@ -70,7 +72,7 @@ void initialise_key(const uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded
     #endif
     #ifdef AES256
     // In 256 bit case we need to do some extra substitution.
-    for (int i = WORDS_PER_KEY; i < WORDS_PER_ROUND_KEY*(ROUND_KEYS + 1); i++)
+    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK*(ROUND_KEYS + 1); i++)
     {
         if (i % WORDS_PER_KEY == 0)
             expanded_key->word_list[i] = 
@@ -87,44 +89,4 @@ void initialise_key(const uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded
                 expanded_key->word_list[i-1];
     }
     #endif
-    /*
-    expanded_key->key_schedule[0][0] = 
-        subword(rotword(expanded_key->initial_key[WORDS_PER_KEY - 1])) ^ 
-        expanded_key->initial_key[0] ^
-        rcon[0];
-
-    #ifndef AES256
-    for (int i = 1; i < WORDS_PER_KEY; i++)
-        expanded_key->key_schedule[0][i] = 
-            expanded_key->key_schedule[0][i-1] ^
-            expanded_key->initial_key[i];
-
-    for (int round = 1; round < ROUND_KEYS; round++)
-    {
-        expanded_key -> key_schedule[round][0] = 
-            subword(rotword(expanded_key->key_schedule[round - 1][WORDS_PER_KEY - 1])) ^
-            expanded_key->key_schedule[round-1][0] ^ 
-            rcon[round];
-
-        for (int i = 1; i < WORDS_PER_KEY; i++)
-            expanded_key->key_schedule[round][i] = 
-                expanded_key->key_schedule[round][i-1] ^ expanded_key->key_schedule[round-1][i];
-    }
-    #endif
-    #ifdef AES256
-    for (int i = 1; i < WORDS_PER_KEY; i++)
-        expanded_key->key_schedule[0][i] = 
-            subword(expanded_key->key_schedule[0][i-1]) ^
-            expanded_key->initial_key[i];
-    for (int round = 1; round < ROUND_KEYS; round++)
-    {
-        expanded_key -> key_schedule[round][0] = 
-            subword(rotword(expanded_key->key_schedule[round - 1][WORDS_PER_KEY - 1])) ^
-            expanded_key->key_schedule[round-1][0] ^
-            rcon[round];
-        for (int i = 1; i < WORDS_PER_KEY; i++)
-            expanded_key->key_schedule[round][i] = 
-                subword(expanded_key->key_schedule[round][i-1]) ^ expanded_key->key_schedule[round-1][i];
-    }
-    #endif */
 }

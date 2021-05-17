@@ -24,7 +24,7 @@ void test_key_schedule()
 {
     #ifdef AES128
     uint32_t initial_key[] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f};
-    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_ROUND_KEY] = {
+    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_BLOCK] = {
         {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f}, //00
         {0xd6aa74fd, 0xd2af72fa, 0xdaa678f1, 0xd6ab76fe}, //01
         {0xb692cf0b, 0x643dbdf1, 0xbe9bc500, 0x6830b3fe}, //02
@@ -40,7 +40,7 @@ void test_key_schedule()
     #endif
     #ifdef AES192
     uint32_t initial_key[] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617};
-    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_ROUND_KEY] = {
+    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_BLOCK] = {
         {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f}, //00
         {0x10111213, 0x14151617, 0x5846f2f9, 0x5c43f4fe}, //01
         {0x544afef5, 0x5847f0fa, 0x4856e2e9, 0x5c43f4fe}, //02
@@ -58,7 +58,7 @@ void test_key_schedule()
     #endif
     #ifdef AES256
     uint32_t initial_key[] = {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f};
-    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_ROUND_KEY] = {
+    uint32_t expected_answer[ROUND_KEYS + 1][WORDS_PER_BLOCK] = {
         {0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f},  //00
         {0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f}, //01
         {0xa573c29f, 0xa176c498, 0xa97fce93, 0xa572c09c}, //02
@@ -82,8 +82,8 @@ void test_key_schedule()
     
     // Check that subsequent derived keys
     for (int round = 0; round < ROUND_KEYS + 1; round++)
-        for (int word = 0; word < WORDS_PER_ROUND_KEY; word++)
-            assert(key_schedule.schedule[round][word] == expected_answer[round][word]);
+        for (int word = 0; word < WORDS_PER_BLOCK; word++)
+            assert(key_schedule.schedule[round].words[word] == expected_answer[round][word]);
 }
 
 int main(void)
