@@ -3,10 +3,11 @@
 #include <stdio.h>
 
 #include <AES.h>
+#include "AES_ks.h"
 
 /////////////////// KEY SCHEDULING //
 
-static uint8_t sbox[] = {
+const uint8_t sbox[] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
     0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -86,7 +87,7 @@ uint32_t subword(uint32_t word)
  * @param initial_key   A pointer to a buffer of uint32_t's of length WORDS_PER_KEY
  * @param expanded_key  A pointer to an AES_key data structure that will hold the expanded key schedule. 
  */
-void initialise_key(uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key)
+void initialise_key(const uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key)
 {
     // First copy the initial key across
     for (int i = 0; i < WORDS_PER_KEY; i++)

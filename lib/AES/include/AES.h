@@ -1,6 +1,6 @@
-#include <stdint.h>
+#pragma once
 
-// #define AES128
+#include <stdint.h>
 
 #ifdef AES128
     #define WORDS_PER_KEY   4
@@ -28,7 +28,3 @@ typedef union AES_key
     uint32_t schedule[ROUND_KEYS + 1][WORDS_PER_ROUND_KEY];
     uint32_t word_list[(ROUND_KEYS + 1) * WORDS_PER_ROUND_KEY];
 } AES_key;
-
-uint32_t rotword(uint32_t word);
-uint32_t subword(uint32_t word);
-void initialise_key(uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key);

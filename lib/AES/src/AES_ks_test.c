@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <AES.h>
+#include "AES_ks.h"
 
 void test_rotword()
 {
@@ -86,6 +87,7 @@ void test_key_schedule()
 
 int main(void)
 {
+    printf("Testing key scheduler for AES%d...\n", (BITS_PER_BYTE * BYTES_PER_WORD * WORDS_PER_KEY) );
     test_rotword();
     printf("Rotword test passed!\n");
     test_subword();
