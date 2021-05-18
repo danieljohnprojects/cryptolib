@@ -1,10 +1,12 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #include <AES.h>
 #include "AES_ks.h"
 #include "AES_sbox.h"
+#include "AES_encr.h"
 
 void test_rotword()
 {
@@ -86,6 +88,15 @@ void test_key_schedule()
             assert(key_schedule.schedule[round].words[word] == expected_answer[round][word]);
 }
 
+void test_encryption_round()
+{
+    block_t input = {.words = {0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff}};
+    block_t expected_out = {.words = {0x5f726415, 0x57f5bc92, 0xf7be3b29, 0x1db9f91a}};
+    block_t output = encryption_round(&input, false);
+    for (int i = 0; i < WORDS_PER_BLOCK; i++)
+        assert(output.words[i] == expected_out.words[i]);
+}
+
 int main(void)
 {
     printf("Testing key scheduler for AES%d...\n", (BITS_PER_BYTE * BYTES_PER_WORD * WORDS_PER_KEY) );
@@ -95,4 +106,6 @@ int main(void)
     printf("Subword test passed!\n");
     test_key_schedule();
     printf("Key schedule test passed!\n");
+    test_encryption_round();
+    printf("Encryption round tests passed!\n");
 }
