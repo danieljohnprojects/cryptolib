@@ -78,3 +78,18 @@ uint32_t rotword(uint32_t word, int n)
     uint32_t bottom = word >> (BITS_PER_BYTE * n * (BYTES_PER_WORD - 1));
     return top ^ bottom;
 }
+
+/**
+ * Compute bytewise xor of two blocks.
+ * 
+ * @param b1
+ * @param b2
+ * 
+ * @return xor of b1 and b2.
+ */
+void xor_blocks(block_t *b1, block_t *b2, block_t *result)
+{
+    for (int i = 0; i < WORDS_PER_BLOCK; i++)
+        result->words[i] = b1->words[i] ^ b2->words[i];
+    return;
+}
