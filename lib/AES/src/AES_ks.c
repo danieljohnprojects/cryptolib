@@ -33,7 +33,9 @@ static const uint32_t rcon[] = {
  * @param initial_key   A pointer to a buffer of uint32_t's of length WORDS_PER_KEY
  * @param expanded_key  A pointer to an AES_key data structure that will hold the expanded key schedule. 
  */
-void initialise_key(const uint32_t initial_key[WORDS_PER_KEY], AES_key *expanded_key)
+void initialise_key(
+    const uint32_t initial_key[WORDS_PER_KEY], 
+    AES_key *expanded_key)
 {
     // First copy the initial key across
     for (int i = 0; i < WORDS_PER_KEY; i++)
