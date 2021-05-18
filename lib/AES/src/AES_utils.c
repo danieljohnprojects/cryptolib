@@ -1,6 +1,7 @@
-#include <stdint.h>
 #include <AES.h>
-#include "AES_sbox.h"
+#include <assert.h>
+#include <stdint.h>
+#include "AES_utils.h"
 
 static const uint8_t sbox[] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
@@ -54,4 +55,26 @@ uint32_t subword(uint32_t word)
     uint32_t b0 = sbox[(word&0xff000000) >> 3*BITS_PER_BYTE];
 
     return (b0 << 3*BITS_PER_BYTE) ^ (b1 << 2*BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
+}
+
+/**
+ * Rotates a word to the left by n bytes.
+ * 
+ * That is:
+ * ([b0,b1,b2,b3], 1) -> [b1,b2,b3,b0]
+ * 
+ * @param word  A word (32 bits long) to be rotated.
+ * @param n     The number of bytes to rotate by (must be 0,1,2, or 3)
+ * 
+ * @return The rotated word.
+ */
+uint32_t rotword(uint32_t word, int n)
+{
+    assert(n > -1);
+    assert(n < BYTES_PER_WORD);
+    if (n == 0) // Avoid undefined behaviour when shifting by 32
+        return word;
+    uint32_t top = word << (n*(BITS_PER_BYTE));
+    uint32_t bottom = word >> (BITS_PER_BYTE * n * (BYTES_PER_WORD - 1));
+    return top ^ bottom;
 }

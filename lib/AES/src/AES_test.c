@@ -5,12 +5,15 @@
 
 #include <AES.h>
 #include "AES_ks.h"
-#include "AES_sbox.h"
+#include "AES_utils.h"
 #include "AES_encr.h"
 
 void test_rotword()
 {
-    assert(rotword(0x01020304) == 0x02030401);
+    assert(rotword(0x01020304, 0) == 0x01020304);
+    assert(rotword(0x01020304, 1) == 0x02030401);
+    assert(rotword(0x01020304, 2) == 0x03040102);
+    assert(rotword(0x01020304, 3) == 0x04010203);
 }
 
 void test_subword()
