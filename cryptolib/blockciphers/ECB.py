@@ -29,7 +29,7 @@ class ECBMode(Mode):
 
     def decrypt(self, ciphertext: bytes, IV: bytes = None):
         if (len(ciphertext) % self.B):
-            raise ValueError(f"Length of ciphertext must be a multiple of f{self.B}. Got f{len(ciphertext)}.")
+            raise ValueError(f"Length of ciphertext must be a multiple of {self.B}. Got {len(ciphertext)}.")
         N = len(ciphertext) // self.B
         cipher_blocks = [ciphertext[i*self.B:(i+1)*self.B] for i in range(N)]
         plain_blocks = []
