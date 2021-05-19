@@ -1,12 +1,14 @@
 from .Challenge import Challenge
 
+from cryptolib.blockciphers import ECBMode
+
 from cryptolib.cracks.substitution import decrypt_single_byte_xor, decrypt_repeating_key_xor
 
 from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import score
 
-from .data import challenge04, challenge06
+from .data import challenge04, challenge06, challenge07
 
 import unittest
 
@@ -176,6 +178,12 @@ class Challenge07(Challenge):
 
     Easiest way: use OpenSSL::Cipher and give it AES-128-ECB as the cipher. 
     """
+    ciphertext = bytes.fromhex(b64_string_to_hex(challenge07.cipher))
+    key = bytes(b'YELLOW SUBMARINE')
+    solution = bytes(challenge07.solution)
+    def solve(self) -> bytes:
+        blockcipher = ECBMode('AES', self.key)
+        return blockcipher.decrypt(self.ciphertext)
 
 class Challenge08(Challenge):
     """
