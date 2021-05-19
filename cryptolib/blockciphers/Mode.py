@@ -11,7 +11,10 @@ class Mode(ABC):
     """
 
     algorithms = {'AES': AES}
-    padding_methods = {'NoPadding': padding.no_padding}
+    padding_methods = {
+        'NoPadding': padding.no_padding,
+        'pkcs7': padding.pkcs7
+        }
 
     @abstractclassmethod
     def __init__(self, 
