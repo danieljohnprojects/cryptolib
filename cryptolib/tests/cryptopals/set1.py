@@ -28,6 +28,9 @@ class Challenge01(Challenge):
     input_str = '49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d'
     solution = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t'
     
+    def __init__(self):
+        self.name = "Challenge01"
+
     def solve(self) -> str:
         return hex_string_to_b64(self.input_str)
 
@@ -49,6 +52,9 @@ class Challenge02(Challenge):
     key = bytes.fromhex('686974207468652062756c6c277320657965')
     solution = bytes.fromhex('746865206b696420646f6e277420706c6179')
     
+    def __init__(self):
+        self.name = "Challenge02"
+
     def solve(self) -> bytes:
         return cyclical_xor(self.key, self.message)
     
@@ -68,9 +74,12 @@ class Challenge03(Challenge):
     """
     cipher = bytes.fromhex('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
     solution = bytes(b"Cooking MC's like a pound of bacon")
+    
+    def __init__(self):
+        self.name = "Challenge03"
 
     def solve(self) -> bytes:
-        return decrypt_single_byte_xor(cipher)[0]
+        return decrypt_single_byte_xor(self.cipher)[0]
 
 class Challenge04(Challenge):
     """
@@ -86,6 +95,9 @@ class Challenge04(Challenge):
     """
     ctexts = challenge04.ciphertexts
     solution = bytes(b'Now that the party is jumping\n')
+    
+    def __init__(self):
+        self.name = "Challenge04"
     
     def solve(self) -> bytes:
         plain = bytes(b'')
@@ -123,6 +135,11 @@ class Challenge05(Challenge):
         )
     key = bytes(b'ICE')
     solution = bytes.fromhex('0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f')
+    
+    def __init__(self):
+        self.name = "Challenge05"
+
+
     def solve(self) -> bytes:
         return cyclical_xor(self.key, self.plaintext)
 
@@ -158,6 +175,10 @@ class Challenge06(Challenge):
     """
     ciphertext = challenge06.cipher
     solution = challenge06.solution
+    
+    def __init__(self):
+        self.name = "Challenge06"
+
     def solve(self) -> bytes:
         c = bytes.fromhex(b64_string_to_hex(self.ciphertext))
         return decrypt_repeating_key_xor(c, range(2, 40))[0]
@@ -181,6 +202,10 @@ class Challenge07(Challenge):
     ciphertext = bytes.fromhex(b64_string_to_hex(challenge07.cipher))
     key = bytes(b'YELLOW SUBMARINE')
     solution = bytes(challenge07.solution)
+    
+    def __init__(self):
+        self.name = "Challenge07"
+
     def solve(self) -> bytes:
         blockcipher = ECBMode('AES', self.key)
         return blockcipher.decrypt(self.ciphertext)
@@ -199,6 +224,21 @@ class Challenge08(Challenge):
 
     Remember that the problem with ECB is that it is stateless and deterministic; the same 16 byte plaintext block will always produce the same 16 byte ciphertext.
     """
+    
+    def __init__(self):
+        self.name = "Challenge08"
+    
 
-if __name__ == '__main__':
-    unittest.main()
+def test_all():
+    challenges = [
+        Challenge01(),
+        Challenge02(),
+        Challenge03(),
+        Challenge04(),
+        Challenge05(),
+        Challenge06(),
+        Challenge07(),
+        Challenge08(),
+        ]
+    for challenge in challenges:
+        challenge.test_challenge()

@@ -1,10 +1,13 @@
-import unittest
+class Challenge():
+    
+    def __init__(self):
+        self.name = ""
 
-class Challenge(unittest.TestCase):
     solution = None
 
     def solve(self):
         return 1
 
     def test_challenge(self):
-        self.assertEqual(self.solution, self.solve())
+        assert(self.solution == self.solve())
+        print(f"Passed test: {self.name}")
