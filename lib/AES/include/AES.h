@@ -44,4 +44,9 @@ typedef union AES_key
     uint32_t word_list[(ROUND_KEYS + 1) * WORDS_PER_BLOCK];
 } AES_key;
 
+void initialise_key(
+    const uint8_t initial_key[WORDS_PER_KEY * BYTES_PER_WORD], 
+    AES_key *expanded_key
+    );
+
 void encrypt(AES_key *key, block_t *in, block_t *out);
