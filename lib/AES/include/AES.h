@@ -50,3 +50,4 @@ void initialise_key(
     );
 
 void encrypt(AES_key *key, block_t *in, block_t *out);
+void decrypt(AES_key *key, block_t *in, block_t *out);
