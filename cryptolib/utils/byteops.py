@@ -2,6 +2,14 @@
 Operations on byte objects.
 """
 
+def block_xor(b1: bytes, b2: bytes) -> bytes:
+    """
+    Xors two byte objects of the same length together.
+    """
+    if len(b1) != len(b2):
+        raise ValueError("Blocks must be of the same length.")
+    return bytes([x^y for x,y in zip(b1, b2)])
+
 def cyclical_xor(key: bytes, message: bytes) -> bytes:
     """
     Xors the key over the message cyclically.
@@ -17,7 +25,7 @@ def cyclical_xor(key: bytes, message: bytes) -> bytes:
     q = len(message) // len(key)
     r = len(message) % len(key)
     long_key = key * q + key[:r]
-    return bytes([a^b for a,b in zip(long_key, message)])
+    return block_xor(long_key, message)
 
 def hamming_distance(m1: bytes, m2:bytes) -> int:
     """
