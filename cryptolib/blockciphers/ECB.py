@@ -13,15 +13,15 @@ class ECBMode(Mode):
         IV: bytes = bytes(b''), 
         nonce: bytes = bytes(b''),
         padding: str = 'NoPadding'):
-        self._engine = (self.algorithms[algorithm])(key)
+        self._engine = (self._algorithms[algorithm])(key)
         self.B = self._engine.block_size
-        self.pad = self.padding_methods[padding]
+        self.pad = self._padding_methods[padding]
 
     def encrypt(self, message: bytes, IV: bytes = None) -> bytes:
         padded_message = self.pad(message, self.B)
         N = len(padded_message) // self.B
         # Separate message into blocks.
-        blocks = [message[i*self.B:(i+1)*self.B] for i in range(N)]
+        blocks = [padded_message[i*self.B:(i+1)*self.B] for i in range(N)]
         cipher_blocks = []
         for block in blocks:
             cipher_blocks.append(self._engine.encrypt(block))

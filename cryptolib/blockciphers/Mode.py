@@ -10,8 +10,8 @@ class Mode(ABC):
     A block cipher mode wraps a block cipher engine and allows for easier encryption of long messages. A concrete realisation of this class may support the use of an IV or nonce and may automatically add padding as needed.
     """
 
-    algorithms = {'AES': AES}
-    padding_methods = {
+    _algorithms = {'AES': AES}
+    _padding_methods = {
         'NoPadding': padding.no_padding,
         'pkcs7': padding.pkcs7
         }
