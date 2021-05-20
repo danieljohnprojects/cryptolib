@@ -8,3 +8,8 @@ from .set1 import (
     Challenge07, 
     Challenge08
 )
+
+from .set2 import (
+    Challenge09,
+    Challenge10
+)
