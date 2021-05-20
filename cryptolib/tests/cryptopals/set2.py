@@ -2,6 +2,8 @@ from .Challenge import Challenge
 
 from cryptolib.blockciphers import CBCMode
 
+from cryptolib.oracles import ECB_CBC_oracle
+
 from cryptolib.utils.conversion import b64_string_to_hex
 from cryptolib.utils.padding import pkcs7
 
@@ -26,7 +28,7 @@ class Challenge09(Challenge):
     def __init__(self):
         self.name = "Challenge09"
     def solve(self) -> bytes:
-        return pkcs7(self.test_in)
+        return pkcs7(self.test_in, 20)
 
 class Challenge10(Challenge):
     """
@@ -50,3 +52,53 @@ class Challenge10(Challenge):
         cipher = CBCMode('AES', bytes(b'YELLOW SUBMARINE'), IV = bytes([0] * 16))
         return cipher.decrypt(ciphertext)
     
+class Challenge11(Challenge):
+    """
+     Now that you have ECB and CBC working:
+
+    Write a function to generate a random AES key; that's just 16 random bytes.
+
+    Write a function that encrypts data under an unknown key --- that is, a function that generates a random key and encrypts under it.
+
+    The function should look like:
+
+    encryption_oracle(your-input)
+    => [MEANINGLESS JIBBER JABBER]
+
+    Under the hood, have the function append 5-10 bytes (count chosen randomly) before the plaintext and 5-10 bytes after the plaintext.
+
+    Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC the other half (just use random IVs each time for CBC). Use rand(2) to decide which to use.
+
+    Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening. 
+    """
+    oracle = ECB_CBC_oracle()
+    def __init__(self):
+        self.name = "Challenge11"
+
+    def solve(self):
+        """
+        The message we send must have two identical blocks encrypted. Since we always prepend at least 5 bytes we need to fill the first block with  at most 11 bytes, then add two more blocks that are the same. So the message needs to be at least 11 + 2 * 16 = 43 bytes long.
+        """
+        message = bytes(b'a' * 43)
+        ciphertext = self.oracle.divine(message)
+        # Chop the ciphertext into blocks
+        B = 16
+        blocks = [ciphertext[i*B:(i+1)*B] for i in range(len(ciphertext) // B)]
+        # If one of the blocks repeat we have ECB mode
+        if len(blocks) != len(set(blocks)):
+            return 'ECB'
+        # Otherwise it must be CBC
+        else:
+            return 'CBC'
+            
+    def postsolve(self):
+        self.solution = self.oracle._last_choice
+
+def test_all():
+    challenges = [
+        Challenge09(),
+        Challenge10(),
+        Challenge11(),
+        ]
+    for challenge in challenges:
+        challenge.test_challenge()
