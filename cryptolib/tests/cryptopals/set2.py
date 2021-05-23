@@ -2,12 +2,14 @@ from .Challenge import Challenge
 
 from cryptolib.blockciphers import CBCMode
 
-from cryptolib.oracles import ECB_CBC_oracle
+from cryptolib.cracks.bc_oracles import get_block_size, uses_ECB, decode_suffix
+
+from cryptolib.oracles import ECB_CBC_oracle, ECB_suffix_oracle
 
 from cryptolib.utils.conversion import b64_string_to_hex
 from cryptolib.utils.padding import pkcs7
 
-from .data import challenge10
+from .data import challenge10, challenge12
 
 class Challenge09(Challenge):
     """
@@ -79,13 +81,8 @@ class Challenge11(Challenge):
         """
         The message we send must have two identical blocks encrypted. Since we always prepend at least 5 bytes we need to fill the first block with  at most 11 bytes, then add two more blocks that are the same. So the message needs to be at least 11 + 2 * 16 = 43 bytes long.
         """
-        message = bytes(b'a' * 43)
-        ciphertext = self.oracle.divine(message)
-        # Chop the ciphertext into blocks
-        B = 16
-        blocks = [ciphertext[i*B:(i+1)*B] for i in range(len(ciphertext) // B)]
-        # If one of the blocks repeat we have ECB mode
-        if len(blocks) != len(set(blocks)):
+        # # If one of the blocks repeat we have ECB mode
+        if uses_ECB(self.oracle):
             return 'ECB'
         # Otherwise it must be CBC
         else:
@@ -94,11 +91,56 @@ class Challenge11(Challenge):
     def postsolve(self):
         self.solution = self.oracle._last_choice
 
+class Challenge12(Challenge):
+    """
+    Copy your oracle function to a new function that encrypts buffers under ECB mode using a consistent but unknown key (for instance, assign a single random key, once, to a global variable).
+
+    Now take that same function and have it append to the plaintext, BEFORE ENCRYPTING, the following string:
+
+    Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+    aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
+    dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
+    YnkK
+
+    Spoiler alert.
+
+    Do not decode this string now. Don't do it.
+
+    Base64 decode the string before appending it. Do not base64 decode the string by hand; make your code do it. The point is that you don't know its contents.
+
+    What you have now is a function that produces:
+
+    AES-128-ECB(your-string || unknown-string, random-key)
+
+    It turns out: you can decrypt "unknown-string" with repeated calls to the oracle function!
+
+    Here's roughly how:
+
+        Feed identical bytes of your-string to the function 1 at a time --- start with 1 byte ("A"), then "AA", then "AAA" and so on. Discover the block size of the cipher. You know it, but do this step anyway.
+        Detect that the function is using ECB. You already know, but do this step anyways.
+        Knowing the block size, craft an input block that is exactly 1 byte short (for instance, if the block size is 8 bytes, make "AAAAAAA"). Think about what the oracle function is going to put in that last byte position.
+        Make a dictionary of every possible last byte by feeding different strings to the oracle; for instance, "AAAAAAAA", "AAAAAAAB", "AAAAAAAC", remembering the first block of each invocation.
+        Match the output of the one-byte-short input to one of the entries in your dictionary. You've now discovered the first byte of unknown-string.
+        Repeat for the next byte.
+    """
+    solution = bytes.fromhex(b64_string_to_hex( challenge12.secret_suffix_b64 ))
+    oracle = ECB_suffix_oracle(solution)
+
+    def __init__(self):
+        self.name = "Challenge12"
+
+    def solve(self):
+        B = get_block_size(self.oracle)
+        assert(uses_ECB(self.oracle, block_size=B))
+        return decode_suffix(self.oracle, B)
+
+
 def test_all():
     challenges = [
         Challenge09(),
         Challenge10(),
         Challenge11(),
+        Challenge12()
         ]
     for challenge in challenges:
         challenge.test_challenge()
