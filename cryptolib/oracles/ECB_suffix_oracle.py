@@ -9,8 +9,8 @@ class ECB_suffix_oracle(BCOracle):
     Takes in a message, appends a secret suffix to it and encrypts it with a random but fixed key.
     """
 
-    def __init__(self, secret_suffix_b64: str):
-        self.__secret_suffix = bytes.fromhex(b64_string_to_hex( secret_suffix_b64 ))
+    def __init__(self, secret_suffix: bytes):
+        self.__secret_suffix = secret_suffix
         self.__ecb = ECBMode('AES', secrets.token_bytes(16), padding='pkcs7')
 
     def divine(self, message: bytes) -> bytes:
