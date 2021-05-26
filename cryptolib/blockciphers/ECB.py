@@ -1,4 +1,5 @@
 from .Mode import Mode
+from cryptolib.utils.byteops import bytes_to_blocks
 
 class ECBMode(Mode):
     """
@@ -8,31 +9,25 @@ class ECBMode(Mode):
     """
 
     def __init__(self, 
-        algorithm: str,
-        key: bytes, 
-        IV: bytes = bytes(b''), 
-        nonce: bytes = bytes(b''),
-        padding: str = 'NoPadding'):
-        self._engine = (self._algorithms[algorithm])(key)
-        self.B = self._engine.block_size
-        self.pad = self._padding_methods[padding]
+            algorithm: str,
+            key: bytes,
+            padding: str = 'NoPadding'):
+        super().__init__(algorithm, key, padding=padding)
 
-    def encrypt(self, message: bytes, IV: bytes = None) -> bytes:
-        padded_message = self.pad(message, self.B)
-        N = len(padded_message) // self.B
-        # Separate message into blocks.
-        blocks = [padded_message[i*self.B:(i+1)*self.B] for i in range(N)]
+    def encrypt(self, message: bytes) -> bytes:
+        padded_message = self.padder.pad(message)
+        blocks = bytes_to_blocks(padded_message, self.B)
         cipher_blocks = []
         for block in blocks:
             cipher_blocks.append(self._engine.encrypt(block))
         return b''.join(cipher_blocks)
 
-    def decrypt(self, ciphertext: bytes, IV: bytes = None):
+    def decrypt(self, ciphertext: bytes):
         if (len(ciphertext) % self.B):
             raise ValueError(f"Length of ciphertext must be a multiple of {self.B}. Got {len(ciphertext)}.")
-        N = len(ciphertext) // self.B
-        cipher_blocks = [ciphertext[i*self.B:(i+1)*self.B] for i in range(N)]
-        plain_blocks = []
+        cipher_blocks = bytes_to_blocks(ciphertext, self.B)
+        plain = b''
         for block in cipher_blocks:
-            plain_blocks.append(self._engine.decrypt(block))
-        return b''.join(plain_blocks)
+            plain += self._engine.decrypt(block)
+        plain = self.padder.strip(plain)
+        return plain

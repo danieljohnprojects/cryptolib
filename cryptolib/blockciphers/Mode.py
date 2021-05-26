@@ -1,7 +1,7 @@
 from abc import ABC, abstractclassmethod
 from cryptolib.blockciphers.engines.AES import AES
 from .engines import *
-from cryptolib.utils import padding
+from cryptolib.utils.padding import Padder
 
 class Mode(ABC):
     """
@@ -11,19 +11,15 @@ class Mode(ABC):
     """
 
     _algorithms = {'AES': AES}
-    _padding_methods = {
-        'NoPadding': padding.no_padding,
-        'pkcs7': padding.pkcs7
-        }
 
     @abstractclassmethod
     def __init__(self, 
         algorithm: str,
         key: bytes, 
-        IV: bytes = bytes(b''), 
-        nonce: bytes = bytes(b''),
         padding: str = 'NoPadding'):
-        pass
+        self._engine = (self._algorithms[algorithm])(key)
+        self.B = self._engine.block_size
+        self.padder = Padder(padding, self.B)
 
     @abstractclassmethod
     def encrypt(self, message: bytes, IV: bytes = None):
