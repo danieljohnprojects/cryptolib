@@ -35,7 +35,7 @@ class BCOracle(Oracle):
         else:
             raise ValueError(f"{mode} is not a recognised mode.")
 
-    def __preprocess(self, message: bytes) -> bytes:
+    def _preprocess(self, message: bytes) -> bytes:
         """
         Returns the input. Can be extended to change the behaviour.
 
@@ -43,13 +43,13 @@ class BCOracle(Oracle):
         """
         return message
 
-    def __encrypt(self, message: bytes) -> bytes:
+    def _encrypt(self, message: bytes) -> bytes:
         """
         Encrypts the message with the internal cipher. Behaviour can be modified (for example to change the IV).
         """
         return self.__cipher.encrypt(message)
 
-    def __postprocess(self, message: bytes) -> bytes:
+    def _postprocess(self, message: bytes) -> bytes:
         """
         Returns the input. Can be extended to change the behaviour.
 
@@ -58,6 +58,6 @@ class BCOracle(Oracle):
         return message
 
     def divine(self, message: bytes) -> bytes:
-        preprocessed = self.__preprocess(message)
-        encrypted = self.__encrypt(preprocessed)
-        return self.__postprocess(encrypted)
+        preprocessed = self._preprocess(message)
+        encrypted = self._encrypt(preprocessed)
+        return self._postprocess(encrypted)
