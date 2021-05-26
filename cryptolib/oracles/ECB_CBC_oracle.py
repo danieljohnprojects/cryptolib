@@ -1,9 +1,9 @@
 import secrets
 
 from ..blockciphers import CBCMode, ECBMode
-from .BCOracle import BCOracle
+from .Oracle import Oracle
 
-class ECB_CBC_oracle(BCOracle):
+class ECB_CBC_oracle(Oracle):
     """
     Takes in a message of bytes, alters it and then encrypts with either ECB or CBC under a random key.
     """
