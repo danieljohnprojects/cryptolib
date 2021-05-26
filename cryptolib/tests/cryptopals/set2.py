@@ -51,7 +51,7 @@ class Challenge10(Challenge):
 
     def solve(self):
         ciphertext = bytes.fromhex(b64_string_to_hex(self.ciphertext))
-        cipher = CBCMode('AES', bytes(b'YELLOW SUBMARINE'), IV = bytes([0] * 16))
+        cipher = CBCMode('AES', bytes(b'YELLOW SUBMARINE'), IV = bytes([0] * 16), padding='pkcs7')
         return cipher.decrypt(ciphertext)
     
 class Challenge11(Challenge):
