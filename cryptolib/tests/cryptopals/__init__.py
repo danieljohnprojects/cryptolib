@@ -11,5 +11,8 @@ from .set1 import (
 
 from .set2 import (
     Challenge09,
-    Challenge10
+    Challenge10,
+    Challenge11,
+    Challenge12,
+    Challenge13,
 )

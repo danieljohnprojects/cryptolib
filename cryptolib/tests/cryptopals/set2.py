@@ -1,15 +1,19 @@
-from .Challenge import Challenge
+from cryptolib.utils.byteops import bytes_to_blocks
+import cryptolib.utils.padding as padding
 
 from cryptolib.blockciphers import CBCMode
-
-from cryptolib.cracks.bc_oracles import get_block_size, uses_ECB, decode_suffix
-
-from cryptolib.oracles import ECB_CBC_oracle, ECB_suffix_oracle
-
+from cryptolib.cracks.bc_oracles import (
+    get_block_size, 
+    uses_ECB, 
+    get_additional_message_len,
+    decode_suffix
+)
+from cryptolib.oracles import ECB_CBC_oracle, AdditionalPlaintextOracle
 from cryptolib.utils.conversion import b64_string_to_hex
-from cryptolib.utils.padding import pkcs7
 
+from .Challenge import Challenge
 from .data import challenge10, challenge12
+from .oracles.challenge13 import create_server_client
 
 class Challenge09(Challenge):
     """
@@ -30,7 +34,7 @@ class Challenge09(Challenge):
     def __init__(self):
         self.name = "Challenge09"
     def solve(self) -> bytes:
-        return pkcs7(self.test_in, 20)
+        return padding.pkcs7(self.test_in, 20)
 
 class Challenge10(Challenge):
     """
@@ -124,7 +128,7 @@ class Challenge12(Challenge):
         Repeat for the next byte.
     """
     solution = bytes.fromhex(b64_string_to_hex( challenge12.secret_suffix_b64 ))
-    oracle = ECB_suffix_oracle(solution)
+    oracle = AdditionalPlaintextOracle(secret_suffix=solution)
 
     def __init__(self):
         self.name = "Challenge12"
@@ -132,15 +136,91 @@ class Challenge12(Challenge):
     def solve(self):
         B = get_block_size(self.oracle)
         assert(uses_ECB(self.oracle, block_size=B))
-        return decode_suffix(self.oracle, B)
+        _, suffix_len = get_additional_message_len(self.oracle, B)
+        return decode_suffix(self.oracle, suffix_len, B)
 
+class Challenge13(Challenge):
+    """
+     Write a k=v parsing routine, as if for a structured cookie. The routine should take:
+
+    foo=bar&baz=qux&zap=zazzle
+
+    ... and produce:
+
+    {
+    foo: 'bar',
+    baz: 'qux',
+    zap: 'zazzle'
+    }
+
+    (you know, the object; I don't care if you convert it to JSON).
+
+    Now write a function that encodes a user profile in that format, given an email address. You should have something like:
+
+    profile_for("foo@bar.com")
+
+    ... and it should produce:
+
+    {
+    email: 'foo@bar.com',
+    uid: 10,
+    role: 'user'
+    }
+
+    ... encoded as:
+
+    email=foo@bar.com&uid=10&role=user
+
+    Your "profile_for" function should not allow encoding metacharacters (& and =). Eat them, quote them, whatever you want to do, but don't let people set their email address to "foo@bar.com&role=admin".
+
+    Now, two more easy functions. Generate a random AES key, then:
+
+        Encrypt the encoded user profile under the key; "provide" that to the "attacker".
+        Decrypt the encoded user profile and parse it.
+
+    Using only the user input to profile_for() (as an oracle to generate "valid" ciphertexts) and the ciphertexts themselves, make a role=admin profile.
+    """
+
+    solution='admin'
+
+    def __init__(self):
+        self.name = "Challenge13"
+        self.server, self.client = create_server_client()
+
+    def solve(self):
+        B = get_block_size(self.client)
+        assert(uses_ECB(self.client, B))
+        prefix_len, suffix_len = get_additional_message_len(self.client, B)
+        # Can't actually decode suffix since it contains characters that we cannot send through the oracle.
+        # suffix = decode_suffix(self.client, suffix_len, B)
+        # assert(suffix.endswith(b'role=user'))
+
+        # Need to figure out what a block consisting of the string "admin" looks like encrypted.
+        desired_role = padding.pkcs7(b'admin', B)
+        # First need to fill out the blocks containing the prefix
+        N = (prefix_len // B + 1) * B - prefix_len
+        message = N*b'a' + desired_role
+        cipherblocks = bytes_to_blocks(self.client.divine(message), B)
+        encrypted_role = cipherblocks[prefix_len // B + 1]
+
+        # Now just get a user who's role lies on the edge of a block.
+        # Want the total message to look like:
+        # |prefix.userd|etails.role=|user........|
+        L = prefix_len + suffix_len - len(b'user')
+        user_details_len = (L // B + 1) * B - L
+        message = b'a' * user_details_len
+        cipherblocks = bytes_to_blocks(self.client.divine(message), B)
+        # Replace the user role with the admin role
+        cipherblocks[-1] = encrypted_role
+        return self.server.divine(b''.join(cipherblocks))
 
 def test_all():
     challenges = [
         Challenge09(),
         Challenge10(),
         Challenge11(),
-        Challenge12()
+        Challenge12(),
+        Challenge13(),
         ]
     for challenge in challenges:
         challenge.test_challenge()
