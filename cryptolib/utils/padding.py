@@ -22,11 +22,14 @@ def strip_pkcs7(message: bytes, block_size: int) -> bytes:
     assert(block_size < 256 and block_size > 0)
     if (len(message) % block_size != 0):
         raise ValueError(f"Message length must be a multiple of {block_size}. Got {len(message)}.")
-    pad_value = message[-1]
-    if not all([x == pad_value for x in message[-pad_value:]]):
+    
+    if not is_valid_pkcs7(message):
         raise ValueError("Message has incorrect padding.")
-    return message[:-pad_value]
+    return message[:-message[-1]]
 
+def is_valid_pkcs7(message: bytes) -> bool:
+    pad_value = message[-1]
+    return all([x == pad_value for x in message[-pad_value:]])
 
 class Padder:
     """
