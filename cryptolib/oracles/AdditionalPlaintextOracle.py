@@ -15,8 +15,8 @@ class AdditionalPlaintextOracle(BCOracle):
             key: bytes = None,
             IV: bytes = None):
         super().__init__(mode, algorithm, padding, key=key, IV=IV)
-        self.__secret_prefix = secret_prefix
-        self.__secret_suffix = secret_suffix
+        self._secret_prefix = secret_prefix
+        self._secret_suffix = secret_suffix
 
     def _preprocess(self, message: bytes) -> bytes:
-        return self.__secret_prefix + message + self.__secret_suffix
+        return self._secret_prefix + message + self._secret_suffix
