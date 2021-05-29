@@ -2,7 +2,6 @@ import secrets
 
 import cryptolib.utils.padding as padding
 
-from cryptolib.utils.byteops import bytes_to_blocks
 from cryptolib.blockciphers import CBCMode
 from cryptolib.cracks.bc_oracles import (
     get_block_size, 
@@ -11,7 +10,9 @@ from cryptolib.cracks.bc_oracles import (
     decode_suffix
 )
 from cryptolib.oracles import ECB_CBC_oracle, AdditionalPlaintextOracle
+from cryptolib.utils.byteops import bytes_to_blocks
 from cryptolib.utils.conversion import b64_string_to_hex
+from cryptolib.utils.padding import is_valid_pkcs7
 
 from .Challenge import Challenge
 from .data import challenge10, challenge12
@@ -238,6 +239,42 @@ class Challenge14(Challenge):
         prefix_len, suffix_len = get_additional_message_len(self.oracle, B)
         return decode_suffix(self.oracle, suffix_len, prefix_len, B)
 
+class Challenge15(Challenge):
+    """
+     Write a function that takes a plaintext, determines if it has valid PKCS#7 padding, and strips the padding off.
+
+    The string:
+
+    "ICE ICE BABY\x04\x04\x04\x04"
+
+    ... has valid padding, and produces the result "ICE ICE BABY".
+
+    The string:
+
+    "ICE ICE BABY\x05\x05\x05\x05"
+
+    ... does not have valid padding, nor does:
+
+    "ICE ICE BABY\x01\x02\x03\x04"
+
+    If you are writing in a language with exceptions, like Python or Ruby, make your function throw an exception on bad padding.
+
+    Crypto nerds know where we're going with this. Bear with us. 
+    """
+
+    test_values = [
+        b"ICE ICE BABY\x04\x04\x04\x04",
+        b"ICE ICE BABY\x05\x05\x05\x05",
+        b"ICE ICE BABY\x01\x02\x03\x04"
+    ]
+    solution = (True, False, False)
+
+    def __init__(self):
+        super().__init__()
+        self.name = "Challenge15"
+
+    def solve(self):
+        return tuple(map(is_valid_pkcs7, self.test_values))
 
 def test_all():
     challenges = [
@@ -247,6 +284,7 @@ def test_all():
         Challenge12(),
         Challenge13(),
         Challenge14(),
+        Challenge15(),
         ]
     for challenge in challenges:
         challenge.test_challenge()
