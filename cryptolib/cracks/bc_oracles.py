@@ -116,24 +116,30 @@ def get_additional_message_len(
 def decode_suffix(
     oracle: AdditionalPlaintextOracle, 
     suffix_len: int,
+    prefix_len: int = 0,
     block_size: int = 16,
     ) -> bytes:
     """
     Decodes the suffix used in an ECB_suffix_oracle object.
     """
-
+    # Number of blocks taken up by the prefix:
+    num_prefix_blocks = prefix_len // block_size + 1
+    # To make life simple we fill out the prefix blocks if needed
+    message = b'\x00' * (num_prefix_blocks * block_size - prefix_len)
     # The maximum number of blocks needed to fit the suffix
-    num_blocks = suffix_len // block_size + 1
-    message = b'\x00' * block_size * num_blocks
+    num_suffix_blocks = suffix_len // block_size + 1
+    message += b'\x00' * block_size * num_suffix_blocks
     suffix = b''
     for _ in range(suffix_len):
         # Pop off the first character
         message = message[1:]
         # First character of 
-        target = oracle.divine(message)
+        encrypted_blocks = bytes_to_blocks(oracle.divine(message), block_size)
+        target_block = encrypted_blocks[num_prefix_blocks + num_suffix_blocks - 1]
         for i in range(256):
-            trial = oracle.divine(message + suffix + bytes([i]))
-            if trial[:num_blocks*block_size] == target[:num_blocks*block_size]:
+            trial_blocks = bytes_to_blocks(oracle.divine(message + suffix + bytes([i])), block_size)
+            trial_block = trial_blocks[num_prefix_blocks + num_suffix_blocks - 1]
+            if trial_block == target_block:
                 # We have found the next byte of the suffix!
                 suffix += bytes([i])
                 break
