@@ -1,6 +1,8 @@
-from cryptolib.utils.byteops import bytes_to_blocks
+import secrets
+
 import cryptolib.utils.padding as padding
 
+from cryptolib.utils.byteops import bytes_to_blocks
 from cryptolib.blockciphers import CBCMode
 from cryptolib.cracks.bc_oracles import (
     get_block_size, 
@@ -137,7 +139,7 @@ class Challenge12(Challenge):
         B = get_block_size(self.oracle)
         assert(uses_ECB(self.oracle, block_size=B))
         _, suffix_len = get_additional_message_len(self.oracle, B)
-        return decode_suffix(self.oracle, suffix_len, B)
+        return decode_suffix(self.oracle, suffix_len, block_size=B)
 
 class Challenge13(Challenge):
     """
@@ -192,7 +194,7 @@ class Challenge13(Challenge):
         assert(uses_ECB(self.client, B))
         prefix_len, suffix_len = get_additional_message_len(self.client, B)
         # Can't actually decode suffix since it contains characters that we cannot send through the oracle.
-        # suffix = decode_suffix(self.client, suffix_len, B)
+        # suffix = decode_suffix(self.client, suffix_len, block_size=B)
         # assert(suffix.endswith(b'role=user'))
 
         # Need to figure out what a block consisting of the string "admin" looks like encrypted.
@@ -214,6 +216,29 @@ class Challenge13(Challenge):
         cipherblocks[-1] = encrypted_role
         return self.server.divine(b''.join(cipherblocks))
 
+class Challenge14(Challenge):
+    """
+     Take your oracle function from #12. Now generate a random count of random bytes and prepend this string to every plaintext. You are now doing:
+
+    AES-128-ECB(random-prefix || attacker-controlled || target-bytes, random-key)
+
+    Same goal: decrypt the target-bytes. 
+    """
+    solution = secrets.token_bytes(secrets.choice(range(6,20)))
+    oracle = AdditionalPlaintextOracle(
+        secret_prefix=secrets.token_bytes(secrets.choice(range(6, 20))),
+        secret_suffix=solution)
+
+    def __init__(self):
+        self.name = "Challenge14"
+
+    def solve(self):
+        B = get_block_size(self.oracle)
+        assert(uses_ECB(self.oracle, block_size=B))
+        prefix_len, suffix_len = get_additional_message_len(self.oracle, B)
+        return decode_suffix(self.oracle, suffix_len, prefix_len, B)
+
+
 def test_all():
     challenges = [
         Challenge09(),
@@ -221,6 +246,7 @@ def test_all():
         Challenge11(),
         Challenge12(),
         Challenge13(),
+        Challenge14(),
         ]
     for challenge in challenges:
         challenge.test_challenge()
