@@ -1,4 +1,5 @@
 from secrets import token_bytes
+from typing import Union
 from .Oracle import Oracle
 
 from ..blockciphers import ECBMode, CBCMode
@@ -20,8 +21,8 @@ class BCOracle(Oracle):
             mode: str, 
             algorithm: str, 
             padding: str,
-            key: bytes = None, 
-            IV: bytes = None):
+            key: Union[bytes, None] = None, 
+            IV: Union[bytes, None] = None):
         if not key:
             key = token_bytes(16)
         if mode.lower() == "cbc":
