@@ -36,11 +36,11 @@ class Padder:
     Adds and strips padding from byte strings according to the specified mode.
     """
     modes = {
-        "NoPadding": (no_padding, no_padding),
+        "nopadding": (no_padding, no_padding),
         "pkcs7": (pkcs7, strip_pkcs7)
     }
     def __init__(self, mode: str, block_size: int):
-        add_pad, strip_pad = self.modes[mode]
+        add_pad, strip_pad = self.modes[mode.lower()]
         self.block_size = block_size
         self.pad = lambda message: add_pad(message, self.block_size)
         self.strip = lambda message: strip_pad(message, self.block_size)
