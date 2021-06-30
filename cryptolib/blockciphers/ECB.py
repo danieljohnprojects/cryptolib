@@ -1,33 +1,32 @@
+from typing import Sequence
 from .Mode import Mode
 from cryptolib.utils.byteops import bytes_to_blocks
 
 class ECBMode(Mode):
-    """
-    A block cipher in ECB mode.
+    """A block cipher in ECB mode.
 
     ECB mode encrypts and decrypts each block separately without the use of an IV or nonce.
+
+    Note that ECB mode is not secure for messages longer than a single block. Repeated blocks of plaintext will encrypt to the same blocks of ciphertext.
     """
 
     def __init__(self, 
             algorithm: str,
-            key: bytes,
-            padding: str = 'NoPadding'):
-        super().__init__(algorithm, key, padding=padding)
+            key: bytes):
+        super().__init__(algorithm, key)
 
-    def encrypt(self, message: bytes) -> bytes:
-        padded_message = self.padder.pad(message)
-        blocks = bytes_to_blocks(padded_message, self.B)
+    def encrypt(self, 
+            message_blocks: Sequence[bytes]
+            ) -> Sequence[bytes]:
         cipher_blocks = []
-        for block in blocks:
+        for block in message_blocks:
             cipher_blocks.append(self._engine.encrypt(block))
-        return b''.join(cipher_blocks)
+        return cipher_blocks
 
-    def decrypt(self, ciphertext: bytes):
-        if (len(ciphertext) % self.B):
-            raise ValueError(f"Length of ciphertext must be a multiple of {self.B}. Got {len(ciphertext)}.")
-        cipher_blocks = bytes_to_blocks(ciphertext, self.B)
-        plain = b''
+    def decrypt(self, 
+            cipher_blocks: Sequence[bytes]
+            ) -> Sequence[bytes]:
+        plain_blocks = []
         for block in cipher_blocks:
-            plain += self._engine.decrypt(block)
-        plain = self.padder.strip(plain)
-        return plain
+            plain_blocks.append(self._engine.decrypt(block))
+        return plain_blocks

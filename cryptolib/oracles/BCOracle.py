@@ -1,40 +1,78 @@
-from secrets import token_bytes
-from typing import Union
+import secrets
+
+from typing import Optional
+
 from .Oracle import Oracle
 
 from ..blockciphers import ECBMode, CBCMode
+from ..utils.byteops import bytes_to_blocks
+from ..utils.padding import Padder
 
 class BCOracle(Oracle):
-    """
-    Block cipher encryption oracle. Can be extended to include pre and post processing of messages.
+    """A block cipher en/decryption oracle. 
+    
+    An oracle that encrypts a message using a specified algorithm, block cipher mode, key, padding strategy, and IV.
 
-    Mode must be set to one of:
-    - CBC
-    - ECB
+    Can be extended to include pre/post-processing of messages.
 
-    Algorithm must be one of:
-    - AES
-
-    If key is provided that key is used to key the oracle, otherwise a random key is generated.
+    Arguments:
+        mode 
+            The block cipher mode to use. Must be one of:
+            -ECB
+            -CBC
+            inputted as a string (case insensitive).
+        algorithm  
+            The algorithm of the underlying block cipher. Must be one of:
+            -AES
+            inputted as a string (case insensitive).
+        padding 
+            The padding strategy to use. Must be one of:
+            -nopadding
+            -pkcs7
+            inputted as a string (case insensitive).
+        key
+            The encryption key used to key the algorithm. If not provided a random one is generated.
+        IV
+            The "Initialisation Vector" used to initialise the block cipher mode. If not provided a random one is generated except if the ECB mode is chosen, in which case none is needed.
+        decrypt
+            A boolean flag to set the oracle to decrypt rather than encrypt. If True then decrypt, if False then encrypt. Defaults to False.
+    
+    Methods:
+        divine
+            The main method of the oracle. In this case the message is provided as a string of bytes. The message is then preprocessed according to the behaviour defined in the _preprocess function. The processed string is then padded, split into blocks and passed to the de/encryption engine. The de/encrypted message is then postprocessed according to the _postprocess function and then returned to the user.
+    
+    The _preprocess, _encrypt, and _postprocess functions can be extended to allow for the desired behaviour. These functions are prefixed with an underscore to indicate they should not be used trying to attacking the oracle. It is expected that these functions be overwritten to display different styles of attacks. 
+    
+    When attacking an oracle only input and output from the divine method should be used (this could include side channel information such as error handling). 
     """
     def __init__(self, 
             mode: str, 
             algorithm: str, 
             padding: str,
-            key: Union[bytes, None] = None, 
-            IV: Union[bytes, None] = None):
+            key: Optional[bytes] = None, 
+            IV: Optional[bytes] = None,
+            decrypt: bool = False):
+
+        # First initialise the encryption engine
         if not key:
-            key = token_bytes(16)
-        if mode.lower() == "cbc":
-            if not IV:
-                IV = token_bytes(16)
-            self._cipher = CBCMode(algorithm, key, IV, padding)
-        elif mode.lower() == "ecb":
+            key = secrets.token_bytes(16)
+        if mode.lower() == "ecb":
             if IV:
                 raise ValueError("ECB mode takes no IV.")
-            self._cipher = ECBMode(algorithm, key, padding)
+            self._cipher = ECBMode(algorithm, key)
         else:
-            raise ValueError(f"{mode} is not a recognised mode.")
+            if not IV:
+                IV = secrets.token_bytes(16)
+            if mode.lower() == "cbc":
+                self._cipher = CBCMode(algorithm, key, IV)
+            else:
+                raise ValueError(f"{mode} is not a recognised mode.")
+        
+        # Then initialise the Padder
+        self._padder = Padder(padding, self._cipher.block_size)
+
+        # Decide whether or not to encrypt or decrypt.
+        self._crypt = self._decrypt if decrypt else self._encrypt
 
     def _preprocess(self, message: bytes) -> bytes:
         """
@@ -46,9 +84,21 @@ class BCOracle(Oracle):
 
     def _encrypt(self, message: bytes) -> bytes:
         """
-        Encrypts the message with the internal cipher. Behaviour can be modified (for example to change the IV).
+        Encrypts the message with the internal block cipher engine. Behaviour can be modified (for example to change the IV).
         """
-        return self._cipher.encrypt(message)
+        padded_message = self._padder.pad(message)
+        message_blocks = bytes_to_blocks(padded_message, self._cipher.block_size)
+        cipher_blocks = self._cipher.encrypt(message_blocks)
+        return b''.join(cipher_blocks)
+
+    def _decrypt(self, message: bytes) -> bytes:
+        """
+        Decrypts the message with the internal block cipher engine. Behaviour can be modified (for example to change the IV).
+        """
+        message_blocks = bytes_to_blocks(message, self._cipher.block_size)
+        plain_blocks = self._cipher.decrypt(message_blocks)
+        padded_plain = b''.join(plain_blocks)
+        return self._padder.strip(padded_plain)
 
     def _postprocess(self, message: bytes) -> bytes:
         """
@@ -60,5 +110,5 @@ class BCOracle(Oracle):
 
     def divine(self, message: bytes) -> bytes:
         preprocessed = self._preprocess(message)
-        encrypted = self._encrypt(preprocessed)
-        return self._postprocess(encrypted)
+        crypted = self._crypt(preprocessed)
+        return self._postprocess(crypted)
