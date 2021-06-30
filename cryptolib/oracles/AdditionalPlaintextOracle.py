@@ -1,10 +1,10 @@
-import secrets
+from typing import Optional
 
 from .BCOracle import BCOracle
 
 class AdditionalPlaintextOracle(BCOracle):
     """
-    Takes in a message, prepends a secret prefix, appends a secret suffix, and encrypts it with a random but fixed key.
+    Takes in a message, prepends a secret prefix, appends a secret suffix, and encrypts it with a random but fixed key in ECB mode.
     """
     def __init__(self, 
             secret_prefix: bytes=b'', 
@@ -12,8 +12,8 @@ class AdditionalPlaintextOracle(BCOracle):
             mode: str = "ECB",
             algorithm: str = "AES",
             padding: str = "pkcs7",
-            key: bytes = None,
-            IV: bytes = None):
+            key: Optional[bytes] = None,
+            IV: Optional[bytes] = None):
         super().__init__(mode, algorithm, padding, key=key, IV=IV)
         self._secret_prefix = secret_prefix
         self._secret_suffix = secret_suffix
