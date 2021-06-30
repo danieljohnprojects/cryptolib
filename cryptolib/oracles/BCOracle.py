@@ -28,11 +28,11 @@ class BCOracle(Oracle):
         if mode.lower() == "cbc":
             if not IV:
                 IV = token_bytes(16)
-            self.__cipher = CBCMode(algorithm, key, IV, padding)
+            self._cipher = CBCMode(algorithm, key, IV, padding)
         elif mode.lower() == "ecb":
             if IV:
                 raise ValueError("ECB mode takes no IV.")
-            self.__cipher = ECBMode(algorithm, key, padding)
+            self._cipher = ECBMode(algorithm, key, padding)
         else:
             raise ValueError(f"{mode} is not a recognised mode.")
 
@@ -48,7 +48,7 @@ class BCOracle(Oracle):
         """
         Encrypts the message with the internal cipher. Behaviour can be modified (for example to change the IV).
         """
-        return self.__cipher.encrypt(message)
+        return self._cipher.encrypt(message)
 
     def _postprocess(self, message: bytes) -> bytes:
         """
