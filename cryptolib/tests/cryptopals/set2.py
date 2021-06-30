@@ -12,7 +12,7 @@ from cryptolib.cracks.bc_oracles import (
 from cryptolib.oracles import ECB_CBC_oracle, AdditionalPlaintextOracle
 from cryptolib.utils.byteops import bytes_to_blocks
 from cryptolib.utils.conversion import b64_string_to_hex
-from cryptolib.utils.padding import is_valid_pkcs7
+from cryptolib.utils.padding import is_valid_pkcs7, strip_pkcs7
 
 from .Challenge import Challenge
 from .data import challenge10, challenge12
@@ -58,8 +58,11 @@ class Challenge10(Challenge):
 
     def solve(self):
         ciphertext = bytes.fromhex(b64_string_to_hex(self.ciphertext))
-        cipher = CBCMode('AES', bytes(b'YELLOW SUBMARINE'), IV = bytes([0] * 16), padding='pkcs7')
-        return cipher.decrypt(ciphertext)
+        cipher = CBCMode('AES', bytes(b'YELLOW SUBMARINE'), IV = bytes([0] * 16))
+        cipher_blocks = bytes_to_blocks(ciphertext, cipher.block_size)
+        plaintext = b''.join(cipher.decrypt(cipher_blocks))
+        up_plain = strip_pkcs7(plaintext, cipher.block_size)
+        return up_plain
     
 class Challenge11(Challenge):
     """

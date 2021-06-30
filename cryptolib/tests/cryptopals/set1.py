@@ -4,7 +4,7 @@ from cryptolib.blockciphers import ECBMode
 
 from cryptolib.cracks.substitution import decrypt_single_byte_xor, decrypt_repeating_key_xor
 
-from cryptolib.utils.byteops import cyclical_xor
+from cryptolib.utils.byteops import bytes_to_blocks, cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import score
 
@@ -208,7 +208,9 @@ class Challenge07(Challenge):
 
     def solve(self) -> bytes:
         blockcipher = ECBMode('AES', self.key)
-        return blockcipher.decrypt(self.ciphertext)
+        cipher_blocks = bytes_to_blocks(self.ciphertext, blockcipher.block_size)
+        plain_blocks = blockcipher.decrypt(cipher_blocks)
+        return b''.join(plain_blocks)
 
 class Challenge08(Challenge):
     """

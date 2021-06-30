@@ -1,6 +1,8 @@
+from cryptolib.utils.byteops import bytes_to_blocks
+from cryptolib.utils.padding import strip_pkcs7
 from typing import Tuple
 from cryptolib.blockciphers import ECBMode
-from cryptolib.oracles import Oracle, AdditionalPlaintextOracle
+from cryptolib.oracles import BCOracle, AdditionalPlaintextOracle
 
 import secrets
 
@@ -19,9 +21,10 @@ class client(AdditionalPlaintextOracle):
             raise ValueError("Usermail cannot contain the characters '&' or '='")
         return super().divine(message)
 
-class server(Oracle):
+class server(BCOracle):
     def __init__(self, key: bytes):
-        self._ecb = ECBMode("AES", key, padding="pkcs7")
+        super().__init__('ecb', 'aes', 'pkcs7', key)
+        self._ecb = ECBMode("AES", key)
     
     def _str_to_dict(self, s: str) -> dict:
         """
@@ -31,12 +34,13 @@ class server(Oracle):
         pairs = s.split('&')
         pairs = [ pair.split('=') for pair in pairs ]
         return { pair[0]:pair[1] for pair in pairs }
-    
+
     def divine(self, message: bytes) -> bytes:
         """
         Takes in an encrypted user profile and returns the role of the user.
         """
-        profile_str = self._ecb.decrypt(message).decode("ascii")
+        plain = self._decrypt(message)
+        profile_str = plain.decode("ascii")
         profile = self._str_to_dict(profile_str)
         return profile['role']
 
