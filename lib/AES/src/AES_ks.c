@@ -21,19 +21,19 @@
 // Define it in terms of bytes so we don't need to worry about endian-ness.
 static const uint8_t rcon_bytes[] = {
     0x00, 0x00, 0x00, 0x00,
-    0x01, 0x00, 0x00, 0x00, 
-    0x02, 0x00, 0x00, 0x00, 
-    0x04, 0x00, 0x00, 0x00, 
-    0x08, 0x00, 0x00, 0x00, 
-    0x10, 0x00, 0x00, 0x00, 
-    0x20, 0x00, 0x00, 0x00, 
-    0x40, 0x00, 0x00, 0x00, 
-    0x80, 0x00, 0x00, 0x00, 
-    0x1b, 0x00, 0x00, 0x00, 
+    0x01, 0x00, 0x00, 0x00,
+    0x02, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00,
+    0x08, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x00, 0x00,
+    0x20, 0x00, 0x00, 0x00,
+    0x40, 0x00, 0x00, 0x00,
+    0x80, 0x00, 0x00, 0x00,
+    0x1b, 0x00, 0x00, 0x00,
     0x36, 0x00, 0x00, 0x00};
 
 // Having a pointer to the word values allows us to xor 4 bytes in parallel.
-static const uint32_t *rcon_words = (uint32_t *) rcon_bytes;
+static const uint32_t *rcon_words = (uint32_t *)rcon_bytes;
 
 static const uint8_t sbox[] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
@@ -79,13 +79,13 @@ static const uint8_t sbox[] = {
  * @param newword   A buffer to store the rotated word.
  */
 static void rotword(
-    uint8_t word[BYTES_PER_WORD], 
+    uint8_t word[BYTES_PER_WORD],
     uint8_t newword[BYTES_PER_WORD])
 {
     // Make sure that words don't overlap.
-    assert( (newword >= word + BYTES_PER_WORD) || (newword <= word - BYTES_PER_WORD) );
+    assert((newword >= word + BYTES_PER_WORD) || (newword <= word - BYTES_PER_WORD));
     for (int i = 0; i < BYTES_PER_WORD; i++)
-        newword[i] = word[(i+1) % BYTES_PER_WORD];
+        newword[i] = word[(i + 1) % BYTES_PER_WORD];
     return;
 }
 
@@ -110,70 +110,66 @@ static void subword(uint8_t word[BYTES_PER_WORD])
  * @param expanded_key  A pointer to an AES_key data structure that will hold the expanded key schedule. 
  */
 void initialise_key(
-    const uint8_t initial_key[WORDS_PER_KEY * BYTES_PER_WORD], 
+    const uint8_t initial_key[WORDS_PER_KEY * BYTES_PER_WORD],
     AES_key *expanded_key)
 {
     // First copy the initial key across in parallel using word interface.
-    uint32_t *keywords = (uint32_t *) initial_key;
+    uint32_t *keywords = (uint32_t *)initial_key;
     for (int i = 0; i < WORDS_PER_KEY; i++)
         expanded_key->word_list[i] = keywords[i];
-    
-    // Then compute the resulting keyschedule
-    #ifndef AES256
-    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK*(ROUND_KEYS + 1); i++)
-    {
-        if (i%WORDS_PER_KEY == 0)
-        {
-            // Rotate the previous word 
-            rotword(
-                (uint8_t *) &(expanded_key->word_list[i-1]),
-                (uint8_t *) &(expanded_key->word_list[i]) 
-            );
-            // Substitute the bytes
-            subword(
-                (uint8_t *) &(expanded_key->word_list[i])
-            );
-            // xor on the appropriate words
-            expanded_key->word_list[i] ^= 
-                expanded_key->word_list[i-WORDS_PER_KEY] ^ 
-                rcon_words[i / WORDS_PER_KEY];
-        }
-        else
-            expanded_key->word_list[i] = 
-                expanded_key->word_list[i-WORDS_PER_KEY] ^ 
-                expanded_key->word_list[i-1];
-    }
-    #endif
-    #ifdef AES256
-    // In 256 bit case we need to do some extra substitution.
-    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK*(ROUND_KEYS + 1); i++)
+
+// Then compute the resulting keyschedule
+#ifndef AES256
+    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK * (ROUND_KEYS + 1); i++)
     {
         if (i % WORDS_PER_KEY == 0)
         {
-            // Rotate the previous word 
+            // Rotate the previous word
             rotword(
-                (uint8_t *) &(expanded_key->word_list[i-1]), 
-                (uint8_t *) &(expanded_key->word_list[i])
-            );
+                (uint8_t *)&(expanded_key->word_list[i - 1]),
+                (uint8_t *)&(expanded_key->word_list[i]));
             // Substitute the bytes
             subword(
-                (uint8_t *) &(expanded_key->word_list[i])
-            );
+                (uint8_t *)&(expanded_key->word_list[i]));
             // xor on the appropriate words
-            expanded_key->word_list[i] ^= 
-                expanded_key->word_list[i-WORDS_PER_KEY] ^ 
+            expanded_key->word_list[i] ^=
+                expanded_key->word_list[i - WORDS_PER_KEY] ^
+                rcon_words[i / WORDS_PER_KEY];
+        }
+        else
+            expanded_key->word_list[i] =
+                expanded_key->word_list[i - WORDS_PER_KEY] ^
+                expanded_key->word_list[i - 1];
+    }
+#endif
+#ifdef AES256
+    // In 256 bit case we need to do some extra substitution.
+    for (int i = WORDS_PER_KEY; i < WORDS_PER_BLOCK * (ROUND_KEYS + 1); i++)
+    {
+        if (i % WORDS_PER_KEY == 0)
+        {
+            // Rotate the previous word
+            rotword(
+                (uint8_t *)&(expanded_key->word_list[i - 1]),
+                (uint8_t *)&(expanded_key->word_list[i]));
+            // Substitute the bytes
+            subword(
+                (uint8_t *)&(expanded_key->word_list[i]));
+            // xor on the appropriate words
+            expanded_key->word_list[i] ^=
+                expanded_key->word_list[i - WORDS_PER_KEY] ^
                 rcon_words[i / WORDS_PER_KEY];
         }
         else if (i % WORDS_PER_KEY == 4) // Special extra stuff for 256 bit
         {
-            expanded_key->word_list[i] = expanded_key->word_list[i-1];
-            subword( (uint8_t *) &(expanded_key->word_list[i]) );
-            expanded_key->word_list[i] ^= expanded_key->word_list[i-WORDS_PER_KEY];
+            expanded_key->word_list[i] = expanded_key->word_list[i - 1];
+            subword((uint8_t *)&(expanded_key->word_list[i]));
+            expanded_key->word_list[i] ^= expanded_key->word_list[i - WORDS_PER_KEY];
         }
         else
-            expanded_key->word_list[i] = 
-                expanded_key->word_list[i-WORDS_PER_KEY] ^ 
-                expanded_key->word_list[i-1];
+            expanded_key->word_list[i] =
+                expanded_key->word_list[i - WORDS_PER_KEY] ^
+                expanded_key->word_list[i - 1];
     }
-    #endif
+#endif
 }

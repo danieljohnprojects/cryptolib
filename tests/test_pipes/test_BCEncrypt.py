@@ -2,8 +2,8 @@ import pytest
 import random
 
 from  Crypto.Cipher import AES
-from cryptolib.oracles import Oracle
-from cryptolib.pipes import BCEncryptPipe
+from cryptolib.oracles import SequentialOracle
+from cryptolib.pipes import BCEncrypt
 
 random.seed(1)
 
@@ -14,12 +14,12 @@ def test_ECB_encryption():
 
         reference_cipher = AES.new(key, AES.MODE_ECB)
 
-        pipe = BCEncryptPipe(
+        pipe = BCEncrypt(
             'ecb', 
             'aes', 
             key=key
         )
-        oracle = Oracle([pipe])
+        oracle = SequentialOracle([pipe])
 
         message = random.randbytes(48)
         enc_message = oracle.divine(message)
@@ -30,7 +30,7 @@ def test_CBC_encryption():
     key_lens = [16, 24, 32]
     for key_len in key_lens:
         key = random.randbytes(key_len)
-        pipe = BCEncryptPipe(
+        pipe = BCEncrypt(
             'cbc', 
             'aes', 
             key=key
@@ -40,7 +40,7 @@ def test_CBC_encryption():
             pipe.set_iv(iv)
             reference_cipher = AES.new(key, AES.MODE_CBC, iv=iv)
 
-            oracle = Oracle([pipe])
+            oracle = SequentialOracle([pipe])
 
             message = random.randbytes(48)
             enc_message = oracle.divine(message)

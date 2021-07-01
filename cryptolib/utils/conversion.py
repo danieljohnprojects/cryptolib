@@ -6,6 +6,7 @@ import base64
 
 __all__ = ['hex_string_to_b64', 'b64_string_to_hex']
 
+
 def hex_string_to_b64(hexstr: str) -> str:
     """
     Takes in a string of hexadecimal digits and converts it to the corresponding string of base 64 digits representing the same bytes.
@@ -17,6 +18,7 @@ def hex_string_to_b64(hexstr: str) -> str:
     """
     b = bytes.fromhex(hexstr)
     return str(base64.b64encode(b))[2:-1]
+
 
 def b64_string_to_hex(b64str: str) -> str:
     """

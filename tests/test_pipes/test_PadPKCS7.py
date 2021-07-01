@@ -1,10 +1,11 @@
 import pytest
 
-from cryptolib.oracles import Oracle
-from cryptolib.pipes import PadPKCS7Pipe
+from cryptolib.oracles import SequentialOracle
+from cryptolib.pipes import PadPKCS7
+
 
 def test_pkcs7():
-    oracle = Oracle([PadPKCS7Pipe()])
+    oracle = SequentialOracle([PadPKCS7()])
     test_vectors = [
         b'0',
         b'01',

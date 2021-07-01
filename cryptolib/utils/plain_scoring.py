@@ -66,11 +66,12 @@ scoring_systems = {
     }
 }
 
+
 def score(
-    plaintext: bytes, 
-    scorer: dict = scoring_systems['scrabble'], 
+    plaintext: bytes,
+    scorer: dict = scoring_systems['scrabble'],
     OOV_score: float = 200
-    ) -> float:
+) -> float:
     """
     Computes a score of a plaintext based on the given scoring system.
     OOV_score is the out of vocabulary score, that is, the score given to non printable characters.

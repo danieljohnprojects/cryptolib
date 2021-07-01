@@ -1,15 +1,16 @@
 from typing import Tuple
-from cryptolib.pipes import BCDecryptPipe, StripPKCS7Pipe
-from cryptolib.oracles import Oracle, AdditionalPlaintextWithQuotingOracle
+from cryptolib.pipes import BCDecrypt, StripPKCS7
+from cryptolib.oracles import SequentialOracle, AdditionalPlaintextWithQuotingOracle
 
 import re
 import secrets
 
-class server(Oracle):
+
+class server(SequentialOracle):
     def __init__(self, key: bytes, iv: bytes):
         self.pipeline = [
-            BCDecryptPipe('cbc', 'aes', key, iv),
-            StripPKCS7Pipe(),
+            BCDecrypt('cbc', 'aes', key, iv),
+            StripPKCS7(),
             self.parse_dict,
             lambda message: self.profile[b'admin']
         ]
@@ -24,13 +25,14 @@ class server(Oracle):
         """
         # (?<!') matches something that doesn't come after a '
         # (?<!')& matches & except if it comes after a '
-        # (?<!')&(?!') matches & except if it is wrapped in quotes 
+        # (?<!')&(?!') matches & except if it is wrapped in quotes
         pairs = re.split(b'(?<!");(?!")', message)
-        pairs = [ re.split(b'(?<!")=(?!")', pair) for pair in pairs ]
-        self.profile = {pair[0]:pair[1] for pair in pairs}
+        pairs = [re.split(b'(?<!")=(?!")', pair) for pair in pairs]
+        self.profile = {pair[0]: pair[1] for pair in pairs}
         return message
 
-def create_server_client() -> Tuple[Oracle, Oracle]:
+
+def create_server_client() -> Tuple[SequentialOracle, SequentialOracle]:
     key = secrets.token_bytes(32)
     iv = secrets.token_bytes(16)
     client = AdditionalPlaintextWithQuotingOracle(

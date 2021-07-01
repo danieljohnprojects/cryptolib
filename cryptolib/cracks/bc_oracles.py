@@ -14,16 +14,17 @@ from math import gcd
 from textwrap import dedent
 from typing import Optional, Tuple
 
-from ..oracles import Oracle, AdditionalPlaintextOracle 
-from ..utils.byteops import bytes_to_blocks #, get_allowable_byte
+from ..oracles import SequentialOracle, AdditionalPlaintextOracle
+from ..utils.byteops import bytes_to_blocks
+
 
 def get_block_size(
-    oracle: Oracle, #BCOracle, 
-    max_size: int = 20, 
-    allowable_bytes: Optional[bytes] = b'') -> int:
+        oracle: SequentialOracle,
+        max_size: int = 20,
+        allowable_bytes: Optional[bytes] = b'') -> int:
     """
     Attempts to determine the block size of the given oracle.
-    
+
     Does this by sending messages of differing lengths and finding when the length of the returned message changes. The max_size argument is thus the maximum length of message sent to the oracle, not the maximum block size it can detect. In some cases it is possible to detect a block size greater than the length of the message sent.
 
     If the oracle is known to have special treatment of certain bytes (for example quotes out some special characters) they can be avoided by specifying the allowable_bytes argument. If no argument is provided there are no guarantees on what bytes are sent.
@@ -43,17 +44,19 @@ def get_block_size(
         message += c
     cipher_lens = sorted(list(set(cipher_lens)))
     if len(cipher_lens) == 1:
-        raise ValueError("Length of return message did not change! Either max_size is too small or the given oracle does not use a block cipher.")
+        raise ValueError(
+            "Length of return message did not change! Either max_size is too small or the given oracle does not use a block cipher.")
     # In case the oracle adds some stuff after encryption we want the difference of each element with the smallest length.
     block_lens = [l - min(cipher_lens) for l in cipher_lens]
 
     B = reduce(gcd, block_lens)
     return B
 
+
 def uses_ECB(
-    oracle: Oracle, #BCOracle, 
-    block_size: int = 16,
-    allowable_bytes: Optional[bytes] = b'') -> bool:
+        oracle: SequentialOracle,
+        block_size: int = 16,
+        allowable_bytes: Optional[bytes] = b'') -> bool:
     """
     Determines if a block cipher oracle is in ECB mode.
 
@@ -66,13 +69,13 @@ def uses_ECB(
     else:
         c = b'\x00'
 
-    # We detect ECB by looking for repeated blocks in the cipher. Thus we need 
+    # We detect ECB by looking for repeated blocks in the cipher. Thus we need
     # to send two blocks of identical text.
-    # The presence of a prefix means that we may not be able to control what is 
+    # The presence of a prefix means that we may not be able to control what is
     # in the first few blocks.
     # Similarly for a suffix and the last few blocks.
-    # Each of these additional strings could be as small as 1 byte so to 
-    # guarantee two repeated blocks our message must have length: 
+    # Each of these additional strings could be as small as 1 byte so to
+    # guarantee two repeated blocks our message must have length:
     # (block_size - 1) + 2*block_size + (block_size - 1)
     # = 4*block_size - 2
     message = bytes(c * (4*block_size - 2))
@@ -82,11 +85,11 @@ def uses_ECB(
     # If any blocks repeat set(blocks) will have less elements than blocks
     return (len(blocks) != len(set(blocks)))
 
+
 def get_additional_message_len(
-        oracle: AdditionalPlaintextOracle, 
+        oracle: AdditionalPlaintextOracle,
         block_size: int,
-        allowable_bytes: Optional[bytes] = b''
-        ) -> Tuple[int,int]:
+        allowable_bytes: Optional[bytes] = b'') -> Tuple[int, int]:
     """
     Determines the length of any prefix and suffix added to a message before being encrypted by an block cipher oracle that uses a fixed IV.
 
@@ -113,7 +116,8 @@ def get_additional_message_len(
         # Need to make sure we don't use the same byte for c and d.
         s = set(allowable_bytes)
         if len(s) < 2:
-            raise ValueError("allowable_bytes must have at least two distinct bytes")
+            raise ValueError(
+                "allowable_bytes must have at least two distinct bytes")
         c = bytes([s.pop()])
         d = bytes([s.pop()])
     else:
@@ -125,7 +129,7 @@ def get_additional_message_len(
     for i in range(block_size):
         # Send two messages that differ in the ith byte.
         zero_enc = oracle.divine(c * i + c)
-        one_enc  = oracle.divine(c * i + d)
+        one_enc = oracle.divine(c * i + d)
 
         # Keep track of lengths of replies.
         lengths.append(len(zero_enc))
@@ -137,9 +141,10 @@ def get_additional_message_len(
         try:
             message_block_idx = same_blocks.index(False)
         except ValueError:
-            raise ValueError("Oracle does not work as expected! Encrypts different messages to same output.")
+            raise ValueError(
+                "SequentialOracle does not work as expected! Encrypts different messages to same output.")
         indexes.append(message_block_idx)
-    
+
     # Determine total length of added plaintext.
     total_len = lengths[0] - (lengths.count(lengths[0]) + 1)
 
@@ -151,13 +156,13 @@ def get_additional_message_len(
 
     return prefix_len, suffix_len
 
+
 def decode_suffix(
-    oracle: AdditionalPlaintextOracle, 
+    oracle: AdditionalPlaintextOracle,
     suffix_len: int,
     prefix_len: int = 0,
     block_size: int = 16,
-    allowable_bytes: Optional[bytes] = b'',
-    ) -> bytes:
+    allowable_bytes: Optional[bytes] = b'') -> bytes:
     """
     Decodes the suffix used in an ECB_suffix_oracle object.
 
@@ -184,12 +189,15 @@ def decode_suffix(
     for _ in range(suffix_len):
         # Pop off the first character
         message = message[1:]
-        # First character of 
+        # First character of
         encrypted_blocks = bytes_to_blocks(oracle.divine(message), block_size)
-        target_block = encrypted_blocks[num_prefix_blocks + num_suffix_blocks - 1]
+        target_block = encrypted_blocks[num_prefix_blocks +
+                                        num_suffix_blocks - 1]
         for i in allowable_bytes:
-            trial_blocks = bytes_to_blocks(oracle.divine(message + suffix + bytes([i])), block_size)
-            trial_block = trial_blocks[num_prefix_blocks + num_suffix_blocks - 1]
+            trial_blocks = bytes_to_blocks(oracle.divine(
+                message + suffix + bytes([i])), block_size)
+            trial_block = trial_blocks[num_prefix_blocks +
+                                       num_suffix_blocks - 1]
             if trial_block == target_block:
                 # We have found the next byte of the suffix!
                 suffix += bytes([i])

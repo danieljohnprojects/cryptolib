@@ -1,6 +1,6 @@
 from typing import Sequence
 from .Mode import Mode
-from cryptolib.utils.byteops import bytes_to_blocks
+
 
 class ECBMode(Mode):
     """A block cipher in ECB mode.
@@ -10,22 +10,22 @@ class ECBMode(Mode):
     Note that ECB mode is not secure for messages longer than a single block. Repeated blocks of plaintext will encrypt to the same blocks of ciphertext.
     """
 
-    def __init__(self, 
-            algorithm: str,
-            key: bytes):
+    def __init__(self,
+                 algorithm: str,
+                 key: bytes):
         super().__init__(algorithm, key)
 
-    def encrypt(self, 
-            message_blocks: Sequence[bytes]
-            ) -> Sequence[bytes]:
+    def encrypt(self,
+                message_blocks: Sequence[bytes]
+                ) -> Sequence[bytes]:
         cipher_blocks = []
         for block in message_blocks:
             cipher_blocks.append(self._engine.encrypt(block))
         return cipher_blocks
 
-    def decrypt(self, 
-            cipher_blocks: Sequence[bytes]
-            ) -> Sequence[bytes]:
+    def decrypt(self,
+                cipher_blocks: Sequence[bytes]
+                ) -> Sequence[bytes]:
         plain_blocks = []
         for block in cipher_blocks:
             plain_blocks.append(self._engine.decrypt(block))

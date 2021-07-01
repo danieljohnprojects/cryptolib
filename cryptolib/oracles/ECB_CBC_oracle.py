@@ -1,35 +1,34 @@
-from cryptolib.utils.byteops import bytes_to_blocks
-from cryptolib.utils.padding import Padder
 import secrets
 
-# from ..blockciphers import CBCMode, ECBMode
-from .Oracle import Oracle
+from .SequentialOracle import SequentialOracle
 
-from ..pipes import BCEncryptPipe, PadPKCS7Pipe
+from ..pipes import BCEncrypt, PadPKCS7
 
-class ECB_CBC_oracle(Oracle):
+
+class ECB_CBC_oracle(SequentialOracle):
     """
     Takes in a message of bytes, alters it and then encrypts with either ECB or CBC under a random key.
     """
+
     def __init__(self):
         self.pipeline = [
             self.add_prefix,
             self.add_suffix,
-            PadPKCS7Pipe(),
+            PadPKCS7(),
             self.choose_engine_and_encrypt
         ]
 
-        self._cbc = lambda : BCEncryptPipe(
+        self._cbc = lambda: BCEncrypt(
             'cbc',
-            'AES', 
-            secrets.token_bytes(16), 
-            iv=secrets.token_bytes(16), 
-            )
-        self._ecb = lambda : BCEncryptPipe(
+            'AES',
+            secrets.token_bytes(16),
+            iv=secrets.token_bytes(16),
+        )
+        self._ecb = lambda: BCEncrypt(
             'ecb',
-            'AES', 
-            secrets.token_bytes(16), 
-            )
+            'AES',
+            secrets.token_bytes(16),
+        )
         # Need a way to test our predictions of the oracle.
         self._last_choice = None
 
@@ -44,5 +43,6 @@ class ECB_CBC_oracle(Oracle):
         return message + suffix
 
     def choose_engine_and_encrypt(self, message: bytes) -> bytes:
-        cipher, self._last_choice = secrets.choice([(self._cbc(), 'CBC'), (self._ecb(), 'ECB')])
+        cipher, self._last_choice = secrets.choice(
+            [(self._cbc(), 'CBC'), (self._ecb(), 'ECB')])
         return cipher(message)

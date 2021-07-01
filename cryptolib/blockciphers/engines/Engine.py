@@ -1,5 +1,6 @@
 from abc import ABC, abstractclassmethod
 
+
 class Engine(ABC):
     """
     An object that encrypts/decrypts a block of bytes using a pre-initialised key.

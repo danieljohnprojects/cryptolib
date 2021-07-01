@@ -55,12 +55,12 @@ static const uint8_t i_sbox[] = {
  */
 static inline uint32_t i_subword(uint32_t word)
 {
-    uint32_t b3 = i_sbox[(word&0xff)];
-    uint32_t b2 = i_sbox[(word&0xff00) >> BITS_PER_BYTE];
-    uint32_t b1 = i_sbox[(word&0xff0000) >> 2*BITS_PER_BYTE];
-    uint32_t b0 = i_sbox[(word&0xff000000) >> 3*BITS_PER_BYTE];
+    uint32_t b3 = i_sbox[(word & 0xff)];
+    uint32_t b2 = i_sbox[(word & 0xff00) >> BITS_PER_BYTE];
+    uint32_t b1 = i_sbox[(word & 0xff0000) >> 2 * BITS_PER_BYTE];
+    uint32_t b0 = i_sbox[(word & 0xff000000) >> 3 * BITS_PER_BYTE];
 
-    return (b0 << 3*BITS_PER_BYTE) ^ (b1 << 2*BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
+    return (b0 << 3 * BITS_PER_BYTE) ^ (b1 << 2 * BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
 }
 
 /**
@@ -73,7 +73,7 @@ static inline void i_subBlock(block_t *in, block_t *out)
 {
     for (int i = 0; i < WORDS_PER_BLOCK; i++)
         out->words[i] = i_subword(in->words[i]);
-    
+
     return;
 }
 
@@ -96,8 +96,8 @@ static inline void i_shiftRows(block_t *in, block_t *out)
     return;
 }
 
-// To invert the mixColumns step we need to multiply bytes by 9, 11, 13, and 14 
-// in GF(2^8). Rather than actually computing these we will just use lookup 
+// To invert the mixColumns step we need to multiply bytes by 9, 11, 13, and 14
+// in GF(2^8). Rather than actually computing these we will just use lookup
 // tables.
 static const uint8_t times9[] = {
 0x00,0x09,0x12,0x1b,0x24,0x2d,0x36,0x3f,0x48,0x41,0x5a,0x53,0x6c,0x65,0x7e,0x77,
@@ -185,26 +185,26 @@ static inline void i_mixColumns(block_t *in, block_t *out)
 {
     for (int j = 0; j < 4; j++)
     {
-        out->bytes[4*j] =            /* b0 = sum of: */
-            times14[in->bytes[4*j]] ^       /* 14*a0 */
-            times11[in->bytes[4*j + 1]] ^   /* 11*a1 */
-            times13[in->bytes[4*j + 2]] ^   /* 13*a2 */
-            times9[in->bytes[4*j + 3]];     /*  9*a3 */
-        out->bytes[4*j + 1] =        /* b1 = sum of: */
-            times9[in->bytes[4*j]] ^        /*  9*a0 */
-            times14[in->bytes[4*j + 1]] ^   /* 14*a1 */
-            times11[in->bytes[4*j + 2]] ^   /* 11*a2 */
-            times13[in->bytes[4*j + 3]];    /* 13*a3 */
-        out->bytes[4*j + 2] =        /* b2 = sum of: */
-            times13[in->bytes[4*j]] ^       /* 13*a0 */
-            times9[in->bytes[4*j + 1]] ^    /*  9*a1 */
-            times14[in->bytes[4*j + 2]] ^   /* 14*a2 */
-            times11[in->bytes[4*j + 3]];    /* 11*a3 */
-        out->bytes[4*j + 3] =        /* b3 = sum of: */
-            times11[in->bytes[4*j]] ^       /* 11*a0 */
-            times13[in->bytes[4*j + 1]] ^   /* 13*a1 */
-            times9[in->bytes[4*j + 2]] ^    /*  9*a2 */
-            times14[in->bytes[4*j + 3]];    /* 14*a3 */
+        out->bytes[4 * j] =                 /* b0 = sum of: */
+            times14[in->bytes[4 * j]] ^     /* 14*a0 */
+            times11[in->bytes[4 * j + 1]] ^ /* 11*a1 */
+            times13[in->bytes[4 * j + 2]] ^ /* 13*a2 */
+            times9[in->bytes[4 * j + 3]];   /*  9*a3 */
+        out->bytes[4 * j + 1] =             /* b1 = sum of: */
+            times9[in->bytes[4 * j]] ^      /*  9*a0 */
+            times14[in->bytes[4 * j + 1]] ^ /* 14*a1 */
+            times11[in->bytes[4 * j + 2]] ^ /* 11*a2 */
+            times13[in->bytes[4 * j + 3]];  /* 13*a3 */
+        out->bytes[4 * j + 2] =             /* b2 = sum of: */
+            times13[in->bytes[4 * j]] ^     /* 13*a0 */
+            times9[in->bytes[4 * j + 1]] ^  /*  9*a1 */
+            times14[in->bytes[4 * j + 2]] ^ /* 14*a2 */
+            times11[in->bytes[4 * j + 3]];  /* 11*a3 */
+        out->bytes[4 * j + 3] =             /* b3 = sum of: */
+            times11[in->bytes[4 * j]] ^     /* 11*a0 */
+            times13[in->bytes[4 * j + 1]] ^ /* 13*a1 */
+            times9[in->bytes[4 * j + 2]] ^  /*  9*a2 */
+            times14[in->bytes[4 * j + 3]];  /* 14*a3 */
     }
     return;
 }

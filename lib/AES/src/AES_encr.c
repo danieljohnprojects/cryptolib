@@ -57,12 +57,12 @@ static const uint8_t sbox[] = {
  */
 static inline uint32_t subword(uint32_t word)
 {
-    uint32_t b3 = sbox[(word&0xff)];
-    uint32_t b2 = sbox[(word&0xff00) >> BITS_PER_BYTE];
-    uint32_t b1 = sbox[(word&0xff0000) >> 2*BITS_PER_BYTE];
-    uint32_t b0 = sbox[(word&0xff000000) >> 3*BITS_PER_BYTE];
+    uint32_t b3 = sbox[(word & 0xff)];
+    uint32_t b2 = sbox[(word & 0xff00) >> BITS_PER_BYTE];
+    uint32_t b1 = sbox[(word & 0xff0000) >> 2 * BITS_PER_BYTE];
+    uint32_t b0 = sbox[(word & 0xff000000) >> 3 * BITS_PER_BYTE];
 
-    return (b0 << 3*BITS_PER_BYTE) ^ (b1 << 2*BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
+    return (b0 << 3 * BITS_PER_BYTE) ^ (b1 << 2 * BITS_PER_BYTE) ^ (b2 << BITS_PER_BYTE) ^ b3;
 }
 
 /**
@@ -76,7 +76,7 @@ static inline void subBlock(block_t *in, block_t *out)
 {
     for (int i = 0; i < WORDS_PER_BLOCK; i++)
         out->words[i] = subword(in->words[i]);
-    
+
     return;
 }
 
@@ -93,7 +93,7 @@ static inline void subBlock(block_t *in, block_t *out)
 static inline void shiftRows(block_t *in, block_t *out)
 {
     for (int i = 0; i < BYTES_PER_BLOCK; i++)
-        out->bytes[i] = in->bytes[ (i + (BYTES_PER_WORD * (i % BYTES_PER_WORD))) % BYTES_PER_BLOCK ];
+        out->bytes[i] = in->bytes[(i + (BYTES_PER_WORD * (i % BYTES_PER_WORD))) % BYTES_PER_BLOCK];
     return;
 }
 
@@ -111,7 +111,7 @@ static inline void shiftRows(block_t *in, block_t *out)
 static inline void rijndaelDouble(block_t *in, block_t *twiceIn)
 {
     for (int i = 0; i < WORDS_PER_BLOCK * BYTES_PER_WORD; i++)
-        twiceIn->bytes[i] = ( in->bytes[i] << 1 ) ^ ( 0x1b & -(in->bytes[i] >> 7) );
+        twiceIn->bytes[i] = (in->bytes[i] << 1) ^ (0x1b & -(in->bytes[i] >> 7));
 }
 
 /**
@@ -129,29 +129,29 @@ static inline void mixColumns(block_t *in, block_t *out)
 {
     block_t twiceIn;
     rijndaelDouble(in, &twiceIn);
-    
+
     for (int j = 0; j < 4; j++)
     {
-        out->bytes[4*j] =                            /* b0 = sum of: */
-            twiceIn.bytes[4*j] ^                             /* 2*a0 */
-            twiceIn.bytes[4*j + 1] ^ in->bytes[4*j + 1] ^    /* 3*a1 */
-            in->bytes[4*j + 2] ^                             /*   a2 */
-            in->bytes[4*j + 3];                              /*   a3 */
-        out->bytes[4*j + 1] =                        /* b1 = sum of: */
-            in->bytes[4*j] ^                                 /*   a0 */
-            twiceIn.bytes[4*j + 1] ^                         /* 2*a1 */
-            twiceIn.bytes[4*j + 2] ^ in->bytes[4*j + 2] ^    /* 3*a2 */
-            in->bytes[4*j + 3];                              /*   a3 */
-        out->bytes[4*j + 2] =                        /* b2 = sum of: */
-            in->bytes[4*j] ^                                 /*   a0 */
-            in->bytes[4*j + 1] ^                             /*   a1 */
-            twiceIn.bytes[4*j + 2] ^                         /* 2*a2 */
-            twiceIn.bytes[4*j + 3] ^ in->bytes[4*j + 3];     /* 3*a3 */
-        out->bytes[4*j + 3] =                        /* b2 = sum of: */
-            twiceIn.bytes[4*j] ^ in->bytes[4*j] ^            /* 3*a0 */
-            in->bytes[4*j + 1] ^                             /*   a1 */
-            in->bytes[4*j + 2] ^                             /*   a2 */
-            twiceIn.bytes[4*j + 3];                          /* 2*a3 */
+        out->bytes[4 * j] =                                   /* b0 = sum of: */
+            twiceIn.bytes[4 * j] ^                            /* 2*a0 */
+            twiceIn.bytes[4 * j + 1] ^ in->bytes[4 * j + 1] ^ /* 3*a1 */
+            in->bytes[4 * j + 2] ^                            /*   a2 */
+            in->bytes[4 * j + 3];                             /*   a3 */
+        out->bytes[4 * j + 1] =                               /* b1 = sum of: */
+            in->bytes[4 * j] ^                                /*   a0 */
+            twiceIn.bytes[4 * j + 1] ^                        /* 2*a1 */
+            twiceIn.bytes[4 * j + 2] ^ in->bytes[4 * j + 2] ^ /* 3*a2 */
+            in->bytes[4 * j + 3];                             /*   a3 */
+        out->bytes[4 * j + 2] =                               /* b2 = sum of: */
+            in->bytes[4 * j] ^                                /*   a0 */
+            in->bytes[4 * j + 1] ^                            /*   a1 */
+            twiceIn.bytes[4 * j + 2] ^                        /* 2*a2 */
+            twiceIn.bytes[4 * j + 3] ^ in->bytes[4 * j + 3];  /* 3*a3 */
+        out->bytes[4 * j + 3] =                               /* b2 = sum of: */
+            twiceIn.bytes[4 * j] ^ in->bytes[4 * j] ^         /* 3*a0 */
+            in->bytes[4 * j + 1] ^                            /*   a1 */
+            in->bytes[4 * j + 2] ^                            /*   a2 */
+            twiceIn.bytes[4 * j + 3];                         /* 2*a3 */
     }
     return;
 }
@@ -174,7 +174,7 @@ void encryption_round(block_t *in, block_t *out, bool final)
         return;
     }
     block_t shifted;
-    shiftRows(&subbed, &shifted);    
+    shiftRows(&subbed, &shifted);
     mixColumns(&shifted, out);
     return;
 }

@@ -1,6 +1,5 @@
 import pytest
 import secrets
-from cryptolib import oracles
 
 from cryptolib.cracks.bc_oracles import (
     uses_ECB, 
@@ -9,12 +8,11 @@ from cryptolib.cracks.bc_oracles import (
     decode_suffix
 )
 from cryptolib.oracles import (
-    Oracle, 
+    SequentialOracle, 
     ECB_CBC_oracle, 
-    AdditionalPlaintextOracle, 
-    AdditionalPlaintextWithQuotingOracle
+    AdditionalPlaintextOracle
 )
-from cryptolib.pipes import StripPKCS7Pipe, PadPKCS7Pipe, BCDecryptPipe
+from cryptolib.pipes import StripPKCS7, PadPKCS7, BCDecrypt
 from cryptolib.utils.byteops import bytes_to_blocks, block_xor
 from cryptolib.utils.conversion import b64_string_to_hex
 from cryptolib.utils.padding import PaddingError, pkcs7
@@ -37,7 +35,7 @@ def test_Challenge09():
     "YELLOW SUBMARINE\\x04\\x04\\x04\\x04"
     """
 
-    oracle = Oracle([PadPKCS7Pipe(block_size=20)])
+    oracle = SequentialOracle([PadPKCS7(block_size=20)])
 
     test_in = bytes(b"YELLOW SUBMARINE")
     solution = bytes(b"YELLOW SUBMARINE\x04\x04\x04\x04")
@@ -60,9 +58,9 @@ def test_Challenge10():
     solution = challenge10.solution
     key = b'YELLOW SUBMARINE'
 
-    oracle = Oracle([
-        BCDecryptPipe('cbc', 'aes', key, iv=bytes(16)),
-        StripPKCS7Pipe()
+    oracle = SequentialOracle([
+        BCDecrypt('cbc', 'aes', key, iv=bytes(16)),
+        StripPKCS7()
     ])
     assert oracle.divine(ciphertext) == solution
 
@@ -204,7 +202,7 @@ def test_Challenge15():
     Crypto nerds know where we're going with this. Bear with us. 
     """
 
-    oracle = Oracle([StripPKCS7Pipe(block_size=16)])
+    oracle = SequentialOracle([StripPKCS7(block_size=16)])
 
     test_values = [
         b"ICE ICE BABY\x04\x04\x04\x04",
