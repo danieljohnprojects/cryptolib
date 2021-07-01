@@ -24,7 +24,7 @@ def strip_pkcs7(message: bytes, block_size: int) -> bytes:
         raise ValueError(f"Message length must be a multiple of {block_size}. Got {len(message)}.")
     
     if not is_valid_pkcs7(message):
-        raise ValueError("Message has incorrect padding.")
+        raise PaddingError()
     return message[:-message[-1]]
 
 def is_valid_pkcs7(message: bytes) -> bool:
@@ -44,3 +44,7 @@ class Padder:
         self.block_size = block_size
         self.pad = lambda message: add_pad(message, self.block_size)
         self.strip = lambda message: strip_pad(message, self.block_size)
+
+class PaddingError(ValueError):
+    def __init__(self, *args: object) -> None:
+        super().__init__("Provided message has incorrect padding", *args)
