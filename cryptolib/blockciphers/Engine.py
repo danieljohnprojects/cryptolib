@@ -7,7 +7,7 @@ class Engine(ABC):
 
     The actual algorithm used to perform encryptions and decryptions is left for concrete implementations of the class.
 
-    The key is fixed when the object is created. To encrypt messages with a different key one would need a new AES engine.
+    The key is fixed when the object is created. To encrypt messages with a different key one would need a new engine.
 
     Methods:
     - encrypt: Takes in a block of plaintext bytes and encrypts it.

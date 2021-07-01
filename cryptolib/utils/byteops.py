@@ -14,12 +14,23 @@ def block_xor(b1: bytes, b2: bytes) -> bytes:
 
 def bytes_to_blocks(message: bytes, block_size: int) -> list[bytes]:
     """
-    Chops up a message into chunks of length block_size.
+    Chops up a message into blocks of length block_size.
 
-    If the message is not a multiple of block_size the last chunk will have length less than block_size.
+    If the message is not a multiple of block_size the last block will have length less than block_size.
     """
-    N = len(message) // block_size
-    blocks = [message[i*block_size:(i+1)*block_size] for i in range(N)]
+    if block_size < 2:
+        raise ValueError(f"block_size must be greater than 1. Got {block_size}.")
+    if not message:
+        return []
+    blocks = [message[:block_size]]
+    i = block_size
+    while len(blocks[-1]) == block_size:
+        block = message[i:i + block_size]
+        if block:
+            blocks.append(message[i: i+block_size])
+            i += block_size
+        else:
+            break
     return blocks
 
 

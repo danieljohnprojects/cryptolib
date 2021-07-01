@@ -1,2 +1,5 @@
-from .ECB import ECBMode
-from .CBC import CBCMode
+from .AES import AES
+
+engine_generators = {
+    'aes': AES
+}
