@@ -32,5 +32,11 @@ class server(Oracle):
 
 def create_server_client() -> Tuple[Oracle, Oracle]:
     key = secrets.token_bytes(32)
-    client = AdditionalPlaintextWithQuotingOracle(b'email=', b'&UID=10&role=user', b'=&', "AES", key)
+    client = AdditionalPlaintextWithQuotingOracle(
+        secret_prefix=b'email=', 
+        secret_suffix=b'&UID=10&role=user', 
+        quote_chars=b'=&', 
+        mode="ecb",
+        algorithm="aes", 
+        key=key)
     return server(key), client
