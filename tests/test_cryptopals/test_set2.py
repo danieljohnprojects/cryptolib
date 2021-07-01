@@ -1,5 +1,6 @@
 import pytest
 import secrets
+from cryptolib import oracles
 
 from cryptolib.cracks.bc_oracles import (
     uses_ECB, 
@@ -7,13 +8,18 @@ from cryptolib.cracks.bc_oracles import (
     get_additional_message_len, 
     decode_suffix
 )
-from cryptolib.oracles import Oracle, ECB_CBC_oracle, AdditionalPlaintextOracle
+from cryptolib.oracles import (
+    Oracle, 
+    ECB_CBC_oracle, 
+    AdditionalPlaintextOracle, 
+    AdditionalPlaintextWithQuotingOracle
+)
 from cryptolib.pipes import StripPKCS7Pipe, PadPKCS7Pipe, BCDecryptPipe
-from cryptolib.utils.byteops import bytes_to_blocks
+from cryptolib.utils.byteops import bytes_to_blocks, block_xor
 from cryptolib.utils.conversion import b64_string_to_hex
 from cryptolib.utils.padding import PaddingError, pkcs7
 
-from .oracles.challenge13 import create_server_client
+from .oracles import challenge13, challenge16
 from .data import challenge10, challenge12
 
 def test_Challenge09():
@@ -130,7 +136,7 @@ def test_Challenge13():
         + bytes(range(ord('&'), ord('='))) \
         + bytes(range(ord('='), 256))
 
-    server, client = create_server_client()
+    server, client = challenge13.create_server_client()
     B = get_block_size(client, allowable_bytes=allowable_bytes)
     assert(uses_ECB(client, B, allowable_bytes=allowable_bytes))
     prefix_len, suffix_len = get_additional_message_len(client, B, allowable_bytes=allowable_bytes)
@@ -251,4 +257,37 @@ def test_Challenge16():
     Completely scrambles the block the error occurs in
     Produces the identical 1-bit error(/edit) in the next ciphertext block.
     """
-    assert False
+    server, client = challenge16.create_server_client()
+
+    allowable_bytes = bytes(set(range(256)) - {ord(';'), ord('=')})
+    B = get_block_size(client, allowable_bytes=allowable_bytes)
+    prefix_len, _ = get_additional_message_len(client, B, allowable_bytes)
+    # We want our message to decrypt to 
+    target_message = b';admin=true'
+    # To do so we will send the string
+    send_message = b':admin<true'
+    # Fill up the blocks containing the prefix, plus an extra block
+    # The extra block will get scrambled when we flip some bits
+    # So we want it to look like:
+    # |{prefix}****|************|:admin<true{|suffix}*****|
+    # We need this extra block just in case there prefix ends at the end of the 
+    # block. We only want to scramble blocks containing our input.
+    N = (B - (prefix_len % B))
+    fill = bytes([allowable_bytes[0]])
+    usr_input = fill * (N + B) + send_message
+
+    enc_input = client.divine(usr_input)
+
+    mask = block_xor(target_message, send_message)
+    # Pad the mask to size B with 0s
+    mask += b'\x00' * ((B - (len(mask) % B)) % B)
+    # If the target message is longer than the block size this won't work
+    assert len(mask) == B
+    # Find the block just before the one containing the target message
+    target_block = enc_input[prefix_len + N : prefix_len + N + B]
+    replacement_block = block_xor(mask, target_block)
+    altered_enc  = enc_input[:prefix_len + N]       \
+                   + replacement_block              \
+                   + enc_input[prefix_len + N + B:]
+    
+    assert server.divine(altered_enc) == b'true'
