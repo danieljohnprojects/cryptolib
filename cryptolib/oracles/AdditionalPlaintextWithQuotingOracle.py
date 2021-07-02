@@ -19,7 +19,8 @@ class AdditionalPlaintextWithQuotingOracle(SequentialOracle):
                  quote_chars: bytes = b'',
                  mode: str = 'ecb',
                  algorithm: str = "AES",
-                 key: Optional[bytes] = None
+                 key: Optional[bytes] = None,
+                 fix_iv: bool = False
                  ):
         pipeline = []
         for char in quote_chars:
@@ -34,15 +35,17 @@ class AdditionalPlaintextWithQuotingOracle(SequentialOracle):
                 PadPKCS7(),
                 ECBEncrypt(algorithm, key)
             ]
-        elif mode == 'cbc':
-            engine = CBCEncrypt(algorithm, key)
+        else:
+            if mode == 'cbc':
+                engine = CBCEncrypt(algorithm, key)
+            else:
+                raise ValueError(f"Mode {mode} is not supported.")
+
+            if not fix_iv:
+                pipeline += [GenIV(engine.block_size)]
             pipeline += [
-                GenIV(engine.block_size),
                 Oracle(lambda message: secret_prefix + message + secret_suffix),
                 PadPKCS7(),
                 engine
             ]
-        else:
-            raise ValueError(f"Mode {mode} is not supported.")
-
         super().__init__(pipeline)

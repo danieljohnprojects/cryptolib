@@ -20,23 +20,29 @@ class AdditionalPlaintextOracle(SequentialOracle):
                  secret_suffix: bytes = b'',
                  mode: str = 'ecb',
                  algorithm: str = "AES",
-                 key: Optional[bytes] = None):
+                 key: Optional[bytes] = None,
+                 fix_iv: bool = False
+                 ):
         if mode == 'ecb':
             pipeline = [
                 Oracle(lambda message: secret_prefix + message + secret_suffix),
                 PadPKCS7(),
                 ECBEncrypt(algorithm, key)
             ]
-        elif mode == 'cbc':
-            engine = CBCEncrypt(algorithm, key)
-            pipeline = [
-                GenIV(engine.block_size),
+        else:
+            pipeline = []
+            if mode == 'cbc':
+                engine = CBCEncrypt(algorithm, key)
+            else:
+                raise ValueError(f"Mode {mode} is not supported.")
+
+            if not fix_iv:
+                pipeline += [GenIV(engine.block_size)]
+            pipeline += [
                 Oracle(lambda message: secret_prefix + message + secret_suffix),
                 PadPKCS7(),
                 engine
             ]
-        else:
-            raise ValueError(f"Mode {mode} is not supported.")
 
         super().__init__(pipeline)
 
