@@ -1,4 +1,5 @@
 import pytest
+import random
 import secrets
 
 from cryptolib.cracks.bc_oracles import (
@@ -8,17 +9,22 @@ from cryptolib.cracks.bc_oracles import (
     decode_suffix
 )
 from cryptolib.oracles import (
-    SequentialOracle, 
-    ECB_CBC_oracle, 
+    SequentialOracle,
     AdditionalPlaintextOracle
 )
-from cryptolib.pipes import StripPKCS7, PadPKCS7, BCDecrypt
+from cryptolib.pipes import (
+    StripPKCS7, 
+    PadPKCS7, 
+    CBCDecrypt, 
+    CBCEncrypt, 
+    ECBEncrypt,
+    GenIV
+)
 from cryptolib.utils.byteops import bytes_to_blocks, block_xor
 from cryptolib.utils.conversion import b64_string_to_hex
 from cryptolib.utils.padding import PaddingError, pkcs7
 
-from .oracles import challenge13, challenge16
-from .data import challenge10, challenge12
+from .data import challenge10, challenge12, challenge13, challenge16
 
 def test_Challenge09():
     """
@@ -35,12 +41,12 @@ def test_Challenge09():
     "YELLOW SUBMARINE\\x04\\x04\\x04\\x04"
     """
 
-    oracle = SequentialOracle([PadPKCS7(block_size=20)])
+    oracle = PadPKCS7(block_size=20)
 
     test_in = bytes(b"YELLOW SUBMARINE")
     solution = bytes(b"YELLOW SUBMARINE\x04\x04\x04\x04")
 
-    assert oracle.divine(test_in) == solution
+    assert oracle(test_in) == solution
 
 def test_Challenge10():
     """
@@ -54,15 +60,16 @@ def test_Challenge10():
 
     The file here is intelligible (somewhat) when CBC decrypted against "YELLOW SUBMARINE" with an IV of all ASCII 0 (\\x00\\x00\\x00 &c) 
     """
-    ciphertext = bytes.fromhex(b64_string_to_hex(challenge10.ciphertext))
+    ciphertext = challenge10.ciphertext
     solution = challenge10.solution
     key = b'YELLOW SUBMARINE'
 
     oracle = SequentialOracle([
-        BCDecrypt('cbc', 'aes', key, iv=bytes(16)),
+        CBCDecrypt('aes', key),
         StripPKCS7()
     ])
-    assert oracle.divine(ciphertext) == solution
+    oracle.iv = bytes(16)
+    assert oracle(ciphertext) == solution
 
 def test_Challenge11():
     """
@@ -83,10 +90,22 @@ def test_Challenge11():
 
     Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening. 
     """
-    oracle = ECB_CBC_oracle()
+
     for _ in range(10):
+        choice = random.choice(['ECB', 'CBC'])
+        if choice == 'ECB':
+            oracle = SequentialOracle([
+                PadPKCS7(),
+                ECBEncrypt('aes', secrets.token_bytes(16)),
+            ])
+        else:
+            oracle = SequentialOracle([
+                GenIV(),
+                PadPKCS7(),
+                CBCEncrypt('aes', secrets.token_bytes(16))
+            ])
         mode = 'ECB' if uses_ECB(oracle) else 'CBC'
-        assert oracle._last_choice == mode
+        assert choice == mode
 
 def test_Challenge12():
     """
@@ -120,7 +139,7 @@ def test_Challenge12():
         Match the output of the one-byte-short input to one of the entries in your dictionary. You've now discovered the first byte of unknown-string.
         Repeat for the next byte.
     """
-    solution = bytes.fromhex(b64_string_to_hex( challenge12.secret_suffix_b64 ))
+    solution = challenge12.secret_suffix_b64
     oracle = AdditionalPlaintextOracle(secret_suffix=solution)
     B = get_block_size(oracle)
     assert(uses_ECB(oracle, block_size=B))
@@ -129,14 +148,50 @@ def test_Challenge12():
     assert suffix == solution
 
 def test_Challenge13():
-    allowable_bytes = \
-        bytes(range(0,ord('&'))) \
-        + bytes(range(ord('&'), ord('='))) \
-        + bytes(range(ord('='), 256))
+    """
+    Write a k=v parsing routine, as if for a structured cookie. The routine should take:
+    foo=bar&baz=qux&zap=zazzle
+    ... and produce:
+    {
+    foo: 'bar',
+    baz: 'qux',
+    zap: 'zazzle'
+    }
+    (you know, the object; I don't care if you convert it to JSON).
+
+    Now write a function that encodes a user profile in that format, given an email address. You should have something like:
+
+    profile_for("foo@bar.com")
+
+    ... and it should produce:
+
+    {
+    email: 'foo@bar.com',
+    uid: 10,
+    role: 'user'
+    }
+
+    ... encoded as:
+
+    email=foo@bar.com&uid=10&role=user
+
+    Your "profile_for" function should not allow encoding metacharacters (& and =). Eat them, quote them, whatever you want to do, but don't let people set their email address to "foo@bar.com&role=admin".
+
+    Now, two more easy functions. Generate a random AES key, then:
+
+        Encrypt the encoded user profile under the key; "provide" that to the "attacker".
+        Decrypt the encoded user profile and parse it.
+
+    Using only the user input to profile_for() (as an oracle to generate "valid" ciphertexts) and the ciphertexts themselves, make a role=admin profile. 
+    """
+    allowable_bytes = bytes(set(range(256)) - {ord('&'), ord('=')})
+    #     bytes(range(0,ord('&'))) \
+    #     + bytes(range(ord('&'), ord('='))) \
+    #     + bytes(range(ord('='), 256))
 
     server, client = challenge13.create_server_client()
     B = get_block_size(client, allowable_bytes=allowable_bytes)
-    assert(uses_ECB(client, B, allowable_bytes=allowable_bytes))
+    assert uses_ECB(client, B, allowable_bytes=allowable_bytes)
     prefix_len, suffix_len = get_additional_message_len(client, B, allowable_bytes=allowable_bytes)
     # Can't actually decode suffix since it contains characters that we cannot send through the oracle.
 
@@ -145,7 +200,7 @@ def test_Challenge13():
     # First need to fill out the blocks containing the prefix
     N = (prefix_len // B + 1) * B - prefix_len
     message = N*b'a' + desired_role
-    cipherblocks = bytes_to_blocks(client.divine(message), B)
+    cipherblocks = bytes_to_blocks(client(message), B)
     encrypted_role = cipherblocks[prefix_len // B + 1]
 
     # Now just get a user who's role lies on the edge of a block.
@@ -154,11 +209,11 @@ def test_Challenge13():
     L = prefix_len + suffix_len - len(b'user')
     user_details_len = (L // B + 1) * B - L
     message = b'a' * user_details_len
-    cipherblocks = bytes_to_blocks(client.divine(message), B)
+    cipherblocks = bytes_to_blocks(client(message), B)
     # Replace the user role with the admin role
     cipherblocks[-1] = encrypted_role
 
-    assert server.divine(b''.join(cipherblocks)) == b'admin'
+    assert server(b''.join(cipherblocks)) == b'admin'
 
 def test_Challenge14():
     """
@@ -202,7 +257,7 @@ def test_Challenge15():
     Crypto nerds know where we're going with this. Bear with us. 
     """
 
-    oracle = SequentialOracle([StripPKCS7(block_size=16)])
+    oracle = StripPKCS7()
 
     test_values = [
         b"ICE ICE BABY\x04\x04\x04\x04",
@@ -210,15 +265,15 @@ def test_Challenge15():
         b"ICE ICE BABY\x01\x02\x03\x04"
     ]
 
-    assert oracle.divine(test_values[0]) == b"ICE ICE BABY"
+    assert oracle(test_values[0]) == b"ICE ICE BABY"
     try:
-        oracle.divine(test_values[1])
+        oracle(test_values[1])
     except PaddingError:
         assert True
     else:
         assert False
     try:
-        oracle.divine(test_values[2])
+        oracle(test_values[2])
     except PaddingError:
         assert True
     else:
@@ -274,7 +329,8 @@ def test_Challenge16():
     fill = bytes([allowable_bytes[0]])
     usr_input = fill * (N + B) + send_message
 
-    enc_input = client.divine(usr_input)
+    enc_input = client(usr_input)
+    server.iv = client.iv
 
     mask = block_xor(target_message, send_message)
     # Pad the mask to size B with 0s
@@ -288,4 +344,4 @@ def test_Challenge16():
                    + replacement_block              \
                    + enc_input[prefix_len + N + B:]
     
-    assert server.divine(altered_enc) == b'true'
+    assert server(altered_enc) == b'true'

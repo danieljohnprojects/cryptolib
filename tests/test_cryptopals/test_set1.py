@@ -6,8 +6,7 @@ from cryptolib.utils.byteops import cyclical_xor, bytes_to_blocks
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import score
 
-from cryptolib.oracles import SequentialOracle
-from cryptolib.pipes import BCDecrypt
+from cryptolib.pipes import ECBDecrypt
 
 from .data import challenge04, challenge06, challenge07, challenge08
 
@@ -149,8 +148,8 @@ def test_Challenge07():
     ciphertext = bytes.fromhex(b64_string_to_hex(challenge07.cipher))
     key = bytes(b'YELLOW SUBMARINE')
     solution = bytes(challenge07.solution)
-    oracle = SequentialOracle([BCDecrypt('ecb', 'aes', key)])
-    assert oracle.divine(ciphertext) == solution
+    oracle = ECBDecrypt('aes', key)
+    assert oracle(ciphertext) == solution
 
 def test_Challenge08():
     """
