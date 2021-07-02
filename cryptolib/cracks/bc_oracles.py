@@ -14,12 +14,12 @@ from math import gcd
 from textwrap import dedent
 from typing import Optional, Tuple
 
-from ..oracles import SequentialOracle, AdditionalPlaintextOracle
+from ..oracles import Oracle, AdditionalPlaintextOracle
 from ..utils.byteops import bytes_to_blocks
 
 
 def get_block_size(
-        oracle: SequentialOracle,
+        oracle: Oracle,
         max_size: int = 20,
         allowable_bytes: Optional[bytes] = b'') -> int:
     """
@@ -40,7 +40,7 @@ def get_block_size(
     message = b''
     cipher_lens = []
     while len(message) < max_size + 1:
-        cipher_lens.append(len(oracle.divine(message)))
+        cipher_lens.append(len(oracle(message)))
         message += c
     cipher_lens = sorted(list(set(cipher_lens)))
     if len(cipher_lens) == 1:
@@ -54,7 +54,7 @@ def get_block_size(
 
 
 def uses_ECB(
-        oracle: SequentialOracle,
+        oracle: Oracle,
         block_size: int = 16,
         allowable_bytes: Optional[bytes] = b'') -> bool:
     """
@@ -79,7 +79,7 @@ def uses_ECB(
     # (block_size - 1) + 2*block_size + (block_size - 1)
     # = 4*block_size - 2
     message = bytes(c * (4*block_size - 2))
-    ciphertext = oracle.divine(message)
+    ciphertext = oracle(message)
     # Chop up the ciphertext and look for repeats.
     blocks = bytes_to_blocks(ciphertext, block_size)
     # If any blocks repeat set(blocks) will have less elements than blocks
@@ -88,7 +88,7 @@ def uses_ECB(
 
 def get_additional_message_len(
         oracle: AdditionalPlaintextOracle,
-        block_size: int,
+        block_size: int = 16,
         allowable_bytes: Optional[bytes] = b'') -> Tuple[int, int]:
     """
     Determines the length of any prefix and suffix added to a message before being encrypted by an block cipher oracle that uses a fixed IV.
@@ -128,8 +128,8 @@ def get_additional_message_len(
     lengths = []
     for i in range(block_size):
         # Send two messages that differ in the ith byte.
-        zero_enc = oracle.divine(c * i + c)
-        one_enc = oracle.divine(c * i + d)
+        zero_enc = oracle(c * i + c)
+        one_enc = oracle(c * i + d)
 
         # Keep track of lengths of replies.
         lengths.append(len(zero_enc))
@@ -190,11 +190,11 @@ def decode_suffix(
         # Pop off the first character
         message = message[1:]
         # First character of
-        encrypted_blocks = bytes_to_blocks(oracle.divine(message), block_size)
+        encrypted_blocks = bytes_to_blocks(oracle(message), block_size)
         target_block = encrypted_blocks[num_prefix_blocks +
                                         num_suffix_blocks - 1]
         for i in allowable_bytes:
-            trial_blocks = bytes_to_blocks(oracle.divine(
+            trial_blocks = bytes_to_blocks(oracle(
                 message + suffix + bytes([i])), block_size)
             trial_block = trial_blocks[num_prefix_blocks +
                                        num_suffix_blocks - 1]
