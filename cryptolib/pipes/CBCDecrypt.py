@@ -1,10 +1,9 @@
 from ..blockciphers import engine_generators
+from ..oracles import Oracle
 from ..utils.byteops import block_xor, bytes_to_blocks
 
-from .Pipe import Pipe
 
-
-class CBCDecrypt(Pipe):
+class CBCDecrypt(Oracle):
     def __init__(self,
                  algorithm: str,
                  key: bytes):

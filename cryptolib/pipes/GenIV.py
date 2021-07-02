@@ -1,7 +1,7 @@
 from secrets import token_bytes
-from .Pipe import Pipe
+from ..oracles import Oracle
 
-class GenIV(Pipe):
+class GenIV(Oracle):
     """
     Generates an IV that is passed to the parent oracle each time a message flows through the pipe.
     

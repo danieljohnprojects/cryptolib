@@ -2,12 +2,11 @@ import secrets
 from typing import Optional
 
 from ..blockciphers import engine_generators
+from ..oracles import Oracle
 from ..utils.byteops import bytes_to_blocks
 
-from .Pipe import Pipe
 
-
-class ECBEncrypt(Pipe):
+class ECBEncrypt(Oracle):
     def __init__(self,
                  algorithm: str,
                  key: Optional[bytes] = None):

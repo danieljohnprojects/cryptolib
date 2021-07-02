@@ -1,10 +1,9 @@
 from ..blockciphers import engine_generators
+from ..oracles import Oracle
 from ..utils.byteops import bytes_to_blocks
 
-from .Pipe import Pipe
 
-
-class ECBDecrypt(Pipe):
+class ECBDecrypt(Oracle):
     def __init__(self,
                  algorithm: str,
                  key: bytes):

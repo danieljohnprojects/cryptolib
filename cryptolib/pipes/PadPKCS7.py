@@ -1,9 +1,8 @@
-from .Pipe import Pipe
-
+from ..oracles import Oracle
 from ..utils.padding import pkcs7
 
 
-class PadPKCS7(Pipe):
+class PadPKCS7(Oracle):
     """Pads a message to be a multiple of the block size."""
 
     def __init__(self, block_size: int = 16):
