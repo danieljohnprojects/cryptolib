@@ -37,8 +37,13 @@ def strip_pkcs7(message: bytes, block_size: int) -> bytes:
     return message[:-message[-1]]
 
 
-def is_valid_pkcs7(message: bytes) -> bool:
+def is_valid_pkcs7(message: bytes, block_size: int = 16) -> bool:
+    if block_size < 1:
+        raise ValueError("Block size must be positive")
     pad_value = message[-1]
+    # Sneaky bugs pop up without the following check:
+    if pad_value not in range(1, 1+block_size):
+        return False
     return all([x == pad_value for x in message[-pad_value:]])
 
 
