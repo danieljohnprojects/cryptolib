@@ -2,66 +2,54 @@
 Functions for breaking ciphers related to substitution ciphers.
 """
 
-from ..utils.byteops import cyclical_xor, hamming_distance
-from ..utils.plain_scoring import score
+from ..cracks.two_time_pad import decrypt_two_time_pad
+from ..utils.byteops import block_xor, hamming_distance
 from collections.abc import Collection
-from math import floor
-
-
-def decrypt_single_byte_xor(ciphertext: bytes) -> bytes:
-    """
-    Finds the best decryption of the ciphertext assuming a single byte xor cipher.
-    """
-    best_plaintext = ciphertext
-    best_score = score(ciphertext)
-    best_key = 0
-    for int_key in range(256):
-        key = bytes([int_key])
-        plaintext = cyclical_xor(key, ciphertext)
-        this_score = score(plaintext)
-        if this_score < best_score:
-            best_plaintext = plaintext
-            best_score = this_score
-            best_key = int_key
-
-    return best_plaintext, best_key
 
 
 def decrypt_repeating_key_xor(
-    ciphertext: bytes,
-    keylengths: Collection[int],
-    num_chunks: int = 8) -> bytes:
+        ciphertext: bytes,
+        block_sizes: Collection[int],
+        num_blocks: int = 8) -> bytes:
     """
     Attempts to decrypt a string of bytes assuming a repeating key xor cipher.
 
-    Tries for keys of each length in the keylengths argument. 
+    Tries for keys of each length in the block_sizes argument. 
 
-    The num_chunks argument determines how many chunks are used to estimate the keylength. Higher is usually better if there is sufficient data.
+    The num_blocks argument determines how many blocks are used to estimate the block_size. Higher is usually better if there is sufficient data.
 
-    Raises an error if the ciphertext is not at least twice as long as the maximum of keylengths. 
+    Raises an error if the ciphertext is not at least twice as long as the maximum of block_sizes. 
     """
 
-    if len(ciphertext) < 2*max(keylengths)*num_chunks:
+    if len(ciphertext) < 2*max(block_sizes)*num_blocks:
         raise ValueError(
-            f"Not enough ciphertext to get {num_chunks} chunks of length {max(keylengths)}. Try with more ciphertext, a smaller number of chunks or with smaller key lengths.")
-    keylength = 0
-    # This is the maximum possible hamming distance between two bytes.
-    best_chunk_score = 8
-    for L in keylengths:
+            f"Not enough ciphertext to get {num_blocks} chunks of length {max(block_sizes)}. Try with more ciphertext, a smaller number of chunks or with smaller key lengths.")
+    
+    # First we determine the most probable block_size
+    block_size = 0
+
+    best_block_score = 8 # the maximum hamming distance between two bytes.
+    for L in block_sizes:
         # Get N chunks of length 2*L
-        chunks = [ciphertext[2*L*n:2*L*(n+1)] for n in range(num_chunks)]
+        blocks = [ciphertext[2*L*n:2*L*(n+1)] for n in range(num_blocks)]
         # Compute the average normalised edit distance (chunk score)
-        def chunk_scorer(chunk): return hamming_distance(chunk[:L], chunk[L:])
-        ave_chunk_score = sum(map(chunk_scorer, chunks)) / (num_chunks*L)
-        # print(ave_chunk_score)
-        if ave_chunk_score < best_chunk_score:
-            best_chunk_score = ave_chunk_score
-            keylength = L
+        block_scorer = lambda chunk: hamming_distance(chunk[:L], chunk[L:])
+        ave_block_score = sum(map(block_scorer, blocks)) / (num_blocks*L)
+        # print(ave_block_score)
+        if ave_block_score < best_block_score:
+            best_block_score = ave_block_score
+            block_size = L
 
-    # Now keylength is hopefully the actual length of the key
-    # Transpose the ciphertext on keylength boundaries
-    cipher_T = [bytes(ciphertext[i::keylength]) for i in range(keylength)]
-    def get_key(b): return decrypt_single_byte_xor(b)[1]
-    key = bytes(map(get_key, cipher_T))
+    # Now block_size is hopefully the actual length of the key
+    # We treat the blocks of ciphertext as a two time pad problem
+    # Transpose the ciphertext on block_size boundaries
+    cipher_blocks = [
+        ciphertext[n*block_size: (n+1)*block_size] 
+        for n in range(len(ciphertext) // block_size)
+    ]
+    remainder = ciphertext[-(len(ciphertext)%block_size):]
+    plaintexts, key = decrypt_two_time_pad(cipher_blocks)
+    plaintext = b''.join(plaintexts)
+    plaintext += block_xor(remainder, key[:len(remainder)])
 
-    return cyclical_xor(key, ciphertext), key
+    return plaintext, key

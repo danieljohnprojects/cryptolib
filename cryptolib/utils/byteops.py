@@ -68,3 +68,13 @@ def hamming_distance(m1: bytes, m2: bytes) -> int:
         raise ValueError("Messages must be the same length.")
     bits_different = cyclical_xor(m1, m2)
     return bin(int.from_bytes(bits_different, 'big')).count('1')
+
+
+def transpose(messages: list[bytes]) -> list[bytes]:
+    """
+    Transposes a list of messages of the same length.
+    
+    For example the list [b'012', b'345'] would produce [b'03', b'14', b'25'].
+    """
+    assert all([len(message) == len(messages[0]) for message in messages])
+    return [bytes([message[i] for message in messages]) for i in range(len(messages[0]))]

@@ -2,6 +2,7 @@
 Functions for scoring plaintext decryptions.
 """
 from string import printable
+from typing import Optional
 
 scoring_systems = {
     'scrabble': {
@@ -67,16 +68,16 @@ scoring_systems = {
 }
 
 
-def score(
-    plaintext: bytes,
-    scorer: dict = scoring_systems['scrabble'],
-    OOV_score: float = 200
-) -> float:
+def score(plaintext: bytes,
+          scorer: Optional[dict] = None,
+          OOV_score: float = 200) -> float:
     """
     Computes a score of a plaintext based on the given scoring system.
     OOV_score is the out of vocabulary score, that is, the score given to non printable characters.
     Defaults to using scrabble scoring.
     """
+    if not scorer:
+        scorer = scoring_systems['scrabble']
     score = 0
     for b in plaintext:
         c = chr(b)
