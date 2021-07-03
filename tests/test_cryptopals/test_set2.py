@@ -3,9 +3,9 @@ import random
 import secrets
 
 from cryptolib.cracks.bc_oracles import (
-    uses_ECB, 
-    get_block_size, 
-    get_additional_message_len, 
+    uses_ECB,
+    get_block_size,
+    get_additional_message_len,
     decode_suffix
 )
 from cryptolib.oracles import (
@@ -13,18 +13,16 @@ from cryptolib.oracles import (
     AdditionalPlaintextOracle
 )
 from cryptolib.pipes import (
-    StripPKCS7, 
-    PadPKCS7, 
-    CBCDecrypt, 
-    CBCEncrypt, 
+    CBCDecrypt,
+    CBCEncrypt,
     ECBEncrypt,
-    GenIV
+    AddIV
 )
 from cryptolib.utils.byteops import bytes_to_blocks, block_xor
-from cryptolib.utils.conversion import b64_string_to_hex
-from cryptolib.utils.padding import PaddingError, pkcs7
+from cryptolib.utils.padding import PaddingError, pkcs7, strip_pkcs7
 
 from .data import challenge10, challenge12, challenge13, challenge16
+
 
 def test_Challenge09():
     """
@@ -41,12 +39,11 @@ def test_Challenge09():
     "YELLOW SUBMARINE\\x04\\x04\\x04\\x04"
     """
 
-    oracle = PadPKCS7(block_size=20)
-
     test_in = bytes(b"YELLOW SUBMARINE")
     solution = bytes(b"YELLOW SUBMARINE\x04\x04\x04\x04")
 
-    assert oracle(test_in) == solution
+    assert pkcs7(test_in, 20) == solution
+
 
 def test_Challenge10():
     """
@@ -66,10 +63,11 @@ def test_Challenge10():
 
     oracle = SequentialOracle([
         CBCDecrypt('aes', key),
-        StripPKCS7()
+        lambda message: strip_pkcs7(message, 16)
     ])
-    oracle.iv = bytes(16)
-    assert oracle(ciphertext) == solution
+
+    assert oracle(bytes(16) + ciphertext) == solution
+
 
 def test_Challenge11():
     """
@@ -95,17 +93,18 @@ def test_Challenge11():
         choice = random.choice(['ECB', 'CBC'])
         if choice == 'ECB':
             oracle = SequentialOracle([
-                PadPKCS7(),
+                lambda message: pkcs7(message, 16),
                 ECBEncrypt('aes', secrets.token_bytes(16)),
             ])
         else:
             oracle = SequentialOracle([
-                GenIV(),
-                PadPKCS7(),
+                lambda message: pkcs7(message, 16),
+                AddIV(),
                 CBCEncrypt('aes', secrets.token_bytes(16))
             ])
         mode = 'ECB' if uses_ECB(oracle) else 'CBC'
         assert choice == mode
+
 
 def test_Challenge12():
     """
@@ -139,13 +138,14 @@ def test_Challenge12():
         Match the output of the one-byte-short input to one of the entries in your dictionary. You've now discovered the first byte of unknown-string.
         Repeat for the next byte.
     """
-    solution = challenge12.secret_suffix_b64
+    solution = challenge12.secret_suffix
     oracle = AdditionalPlaintextOracle(secret_suffix=solution)
     B = get_block_size(oracle)
     assert(uses_ECB(oracle, block_size=B))
     _, suffix_len = get_additional_message_len(oracle, B)
     suffix = decode_suffix(oracle, suffix_len, block_size=B)
     assert suffix == solution
+
 
 def test_Challenge13():
     """
@@ -185,14 +185,12 @@ def test_Challenge13():
     Using only the user input to profile_for() (as an oracle to generate "valid" ciphertexts) and the ciphertexts themselves, make a role=admin profile. 
     """
     allowable_bytes = bytes(set(range(256)) - {ord('&'), ord('=')})
-    #     bytes(range(0,ord('&'))) \
-    #     + bytes(range(ord('&'), ord('='))) \
-    #     + bytes(range(ord('='), 256))
 
     server, client = challenge13.create_server_client()
     B = get_block_size(client, allowable_bytes=allowable_bytes)
     assert uses_ECB(client, B, allowable_bytes=allowable_bytes)
-    prefix_len, suffix_len = get_additional_message_len(client, B, allowable_bytes=allowable_bytes)
+    prefix_len, suffix_len = get_additional_message_len(
+        client, B, allowable_bytes=allowable_bytes)
     # Can't actually decode suffix since it contains characters that we cannot send through the oracle.
 
     # Need to figure out what a block consisting of the string "admin" looks like encrypted.
@@ -215,6 +213,7 @@ def test_Challenge13():
 
     assert server(b''.join(cipherblocks)) == b'admin'
 
+
 def test_Challenge14():
     """
     Take your oracle function from #12. Now generate a random count of random bytes and prepend this string to every plaintext. You are now doing:
@@ -223,7 +222,7 @@ def test_Challenge14():
 
     Same goal: decrypt the target-bytes. 
     """
-    solution = secrets.token_bytes(secrets.choice(range(6,20)))
+    solution = secrets.token_bytes(secrets.choice(range(6, 20)))
     oracle = AdditionalPlaintextOracle(
         secret_prefix=secrets.token_bytes(secrets.choice(range(6, 20))),
         secret_suffix=solution
@@ -233,6 +232,7 @@ def test_Challenge14():
     assert(uses_ECB(oracle, block_size=B))
     prefix_len, suffix_len = get_additional_message_len(oracle, B)
     assert decode_suffix(oracle, suffix_len, prefix_len, B) == solution
+
 
 def test_Challenge15():
     """
@@ -257,27 +257,26 @@ def test_Challenge15():
     Crypto nerds know where we're going with this. Bear with us. 
     """
 
-    oracle = StripPKCS7()
-
     test_values = [
         b"ICE ICE BABY\x04\x04\x04\x04",
         b"ICE ICE BABY\x05\x05\x05\x05",
         b"ICE ICE BABY\x01\x02\x03\x04"
     ]
 
-    assert oracle(test_values[0]) == b"ICE ICE BABY"
+    assert strip_pkcs7(test_values[0], 16) == b"ICE ICE BABY"
     try:
-        oracle(test_values[1])
+        strip_pkcs7(test_values[1], 16)
     except PaddingError:
         assert True
     else:
         assert False
     try:
-        oracle(test_values[2])
+        strip_pkcs7(test_values[2], 16)
     except PaddingError:
         assert True
     else:
         assert False
+
 
 def test_Challenge16():
     """
@@ -315,7 +314,7 @@ def test_Challenge16():
     allowable_bytes = bytes(set(range(256)) - {ord(';'), ord('=')})
     B = get_block_size(client, allowable_bytes=allowable_bytes)
     prefix_len, _ = get_additional_message_len(client, B, allowable_bytes)
-    # We want our message to decrypt to 
+    # We want our message to decrypt to
     target_message = b';admin=true'
     # To do so we will send the string
     send_message = b':admin<true'
@@ -323,7 +322,7 @@ def test_Challenge16():
     # The extra block will get scrambled when we flip some bits
     # So we want it to look like:
     # |{prefix}****|************|:admin<true{|suffix}*****|
-    # We need this extra block just in case there prefix ends at the end of the 
+    # We need this extra block just in case there prefix ends at the end of the
     # block. We only want to scramble blocks containing our input.
     N = (B - (prefix_len % B))
     fill = bytes([allowable_bytes[0]])
@@ -338,10 +337,10 @@ def test_Challenge16():
     # If the target message is longer than the block size this won't work
     assert len(mask) == B
     # Find the block just before the one containing the target message
-    target_block = enc_input[prefix_len + N : prefix_len + N + B]
+    target_block = enc_input[prefix_len + N: prefix_len + N + B]
     replacement_block = block_xor(mask, target_block)
-    altered_enc  = enc_input[:prefix_len + N]       \
-                   + replacement_block              \
-                   + enc_input[prefix_len + N + B:]
-    
+    altered_enc = enc_input[:prefix_len + N]       \
+        + replacement_block              \
+        + enc_input[prefix_len + N + B:]
+
     assert server(altered_enc) == b'true'

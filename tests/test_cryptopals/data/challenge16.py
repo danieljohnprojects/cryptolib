@@ -1,6 +1,7 @@
 from typing import Tuple
-from cryptolib.pipes import CBCDecrypt, StripPKCS7
-from cryptolib.oracles import Oracle, SequentialOracle, AdditionalPlaintextWithQuotingOracle
+from cryptolib.pipes import CBCDecrypt
+from cryptolib.oracles import SequentialOracle, AdditionalPlaintextWithQuotingOracle
+from cryptolib.utils.padding import strip_pkcs7
 
 import re
 import secrets
@@ -35,8 +36,8 @@ def create_server_client() -> Tuple[SequentialOracle, SequentialOracle]:
     )
     server = SequentialOracle([
         CBCDecrypt('aes', key),
-        StripPKCS7(),
-        Oracle(parse_dict),
+        lambda message: strip_pkcs7(message, 16),
+        parse_dict,
     ])
     client.iv = secrets.token_bytes(16)
     server.iv = client.iv

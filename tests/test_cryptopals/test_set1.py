@@ -60,13 +60,13 @@ def test_Challenge04():
 
     (Your code from #3 should help.) 
     """
-    ctexts = challenge04.ciphertexts
+    ctexts = map(bytes.fromhex, challenge04.ciphertexts)
     solution = bytes(b'Now that the party is jumping\n')
 
     plain = bytes(b'')
     best_score = 1e10
     for cipher in ctexts:
-        this_plain, _ = decrypt_single_byte_xor(bytes.fromhex(cipher))
+        this_plain, _ = decrypt_single_byte_xor(cipher)
         if (this_score := score(this_plain)) < best_score:
             plain = this_plain
             best_score = this_score
