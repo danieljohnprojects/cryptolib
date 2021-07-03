@@ -1,4 +1,3 @@
-from cryptolib.oracles.PaddingOracle import PaddingOracle
 import pytest
 import random
 
@@ -11,7 +10,8 @@ from cryptolib.cracks.bc_oracles import (
 )
 from cryptolib.oracles import (
     SequentialOracle,
-    AdditionalPlaintextOracle
+    AdditionalPlaintextOracle,
+    PaddingOracle
 )
 from cryptolib.pipes import (
     ECBEncrypt,
