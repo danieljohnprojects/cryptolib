@@ -1,21 +1,23 @@
-from ..blockciphers import engine_generators
-from ..oracles import Oracle
+from .ECBDecrypt import ECBDecrypt
+
 from ..utils.byteops import block_xor, bytes_to_blocks
 
 
-class CBCDecrypt(Oracle):
-    def __init__(self,
-                 algorithm: str,
-                 key: bytes):
-        self._engine = engine_generators[algorithm.lower()](key)
-        self.block_size = self._engine.block_size
-
+class CBCDecrypt(ECBDecrypt):
     def __call__(self, message: bytes) -> bytes:
-        message_blocks = bytes_to_blocks(message, self.block_size)
+        """
+        Decrypts a message in CBC mode, treating the first block as an IV.
+
+        Returns the plain text sans iv.
+        """
+        message_blocks = bytes_to_blocks(message, self.state['block_size'])
+        if len(message_blocks) < 2:
+            raise ValueError(f"Need at least two blocks (one of IV, one of data) to decrypt in CBC mode, got {len(message_blocks)}.")
+
         plain_blocks = []
-        prev_block = self.parent.iv
-        for block in message_blocks:
-            plain_block = block_xor(self._engine.decrypt(block), prev_block)
+        prev_block = message_blocks[0]
+        for block in message_blocks[1:]:
+            plain_block = block_xor(self.state['engine'].decrypt(block), prev_block)
             plain_blocks.append(plain_block)
             prev_block = block
 

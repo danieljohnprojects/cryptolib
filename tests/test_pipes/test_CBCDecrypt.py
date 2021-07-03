@@ -22,15 +22,19 @@ def test_CBCDecrypt():
         oracle.iv = iv
 
         message = random.randbytes(48)
-        dec_message = oracle(message)
+        dec_message = oracle(iv + message)
         expected_out = reference_cipher.decrypt(message)
         assert dec_message == expected_out
 
-    # Decrypting an empty message should give an empty message back.
-    assert oracle(b'') == b''
-
-    # Should fail to encrypt if the block size is wrong.
-    for n in range(1, 16):
+    # Should fail to decrypt if the block size is wrong and if an empty message is passed.
+    for n in range(0, 16):
+        try:
+            oracle(b'a'*n)
+        except ValueError:
+            assert True
+        else:
+            assert False, n
+    for n in range(17, 32):
         try:
             oracle(b'a'*n)
         except ValueError:

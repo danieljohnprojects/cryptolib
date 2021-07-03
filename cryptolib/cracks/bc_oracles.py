@@ -12,10 +12,10 @@ The attacks in this module assume the following model for oracles:
 from functools import reduce
 from math import gcd
 from textwrap import dedent
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
-from ..oracles import Oracle, AdditionalPlaintextOracle
-from ..utils.byteops import bytes_to_blocks
+from ..oracles import Oracle, AdditionalPlaintextOracle, PaddingOracle
+from ..utils.byteops import block_xor, bytes_to_blocks
 
 
 def get_block_size(
@@ -87,13 +87,21 @@ def uses_ECB(
 
 
 def get_additional_message_len(
-        oracle: AdditionalPlaintextOracle,
+        oracle: Oracle,
         block_size: int = 16,
         allowable_bytes: Optional[bytes] = b'') -> Tuple[int, int]:
     """
-    Determines the length of any prefix and suffix added to a message before being encrypted by an block cipher oracle that uses a fixed IV.
+    Determines the length of any prefix and suffix added to a message before being encrypted by an block cipher oracle that uses ECB mode or CBC and a fixed IV.
 
-    The method for determining the prefix length is easiest explained with an example:
+    Arguments:
+        oracle
+            An oracle object of the form in the module description.
+        block_size
+            The block size used by the oracle
+        allowable_bytes
+            A byte string consisting of bytes that are safe to send. Ones that won't be quoted out for example.
+
+    The method for determining the prefix length is most easily explained with an example:
 
     Suppose we have an oracle that takes a message, prepends 'A' to it, appends 'B' to it, pads the altered message, and finally encrypts it with a block size of 4. So given an empty string the oracle returns the encryption of the string "AB\x02\x02".
     The following messages are sent, processed and received back in pairs:
@@ -158,11 +166,11 @@ def get_additional_message_len(
 
 
 def decode_suffix(
-    oracle: AdditionalPlaintextOracle,
-    suffix_len: int,
-    prefix_len: int = 0,
-    block_size: int = 16,
-    allowable_bytes: Optional[bytes] = b'') -> bytes:
+        oracle: AdditionalPlaintextOracle,
+        suffix_len: int,
+        prefix_len: int = 0,
+        block_size: int = 16,
+        allowable_bytes: Optional[bytes] = b'') -> bytes:
     """
     Decodes the suffix used in an ECB_suffix_oracle object.
 
@@ -208,3 +216,134 @@ def decode_suffix(
             raise RuntimeError(dedent(f"""Could not decode the next byte of the suffix. This should only happen if the next byte was not included in the allowable_bytes argument.
             Suffix up to this point was "{suffix}". The next byte is one of "{avoid_bytes}"."""))
     return suffix
+
+
+def decrypt_with_padding_oracle(
+        message: bytes,
+        oracle: PaddingOracle,
+        mode: str,
+        block_size: int = 16) -> bytes:
+    """
+    Decrypts a message using an oracle that reveals only whether a given message is correctly padded.
+
+    For example in CBC mode. Suppose we have some ciphertext that would normally decrypt like so:
+    |****|****|****|  ------> |0123|4567|8333|
+    Note the 3s in the final block of plaintext are padding.
+
+    We xor the final byte of the penultimate block of ciphertext with 0x01. This scrambles the decryption of this block and xors the final byte of the final block of plaintext with 0x01.
+      |****|****|****|  
+    + |0000|0001|0000|  -----> |0123|####|8332|
+    We then query the oracle with the altered ciphertext. This does not pass the padding check. We keep trying until we find a byte that does. Eg:
+      |****|****|****|  
+    + |0000|0002|0000|  -----> |0123|####|8331|
+    This plaintext passes the padding check. But now we know that the original plaintext byte xored with 2 gives 1 so we know the original plaintext byte was 3.
+    We continue with the second last byte, looking for the one that gives valid padding:
+      |****|****|****|  
+    + |0000|0011|0000|  -----> |0123|####|8322|
+    Since we know the final byte of plain text we choose the final byte of the penultimate block so that we get valid padding when we guess the next byte.
+
+    The first block of ciphertext is the IV so we don't need to decrypt that one.
+    """
+    if mode.lower() == 'cbc':
+        pass
+    else:
+        raise NotImplementedError(
+            "Padding attacks are currently only implemented for CBC mode.")
+
+    # We need a convenient way of setting the iv in the oracle 
+
+    # We need to use this over and over so make it read only
+    cipher_blocks = tuple(bytes_to_blocks(message, block_size))
+    if len(cipher_blocks) < 2:
+        raise ValueError(f"Ciphertext must consist of at least two blocks, the first being the IV. Got {len(cipher_blocks)}.")
+
+    # We'll overwrite this copy a bunch
+    blocks = list(cipher_blocks)
+    decrypted_message = b''
+    decrypted_block = b''
+
+    ###########################
+    #### Determine padding ####
+    ###########################
+    # First we need to determine the padding by decrypting the very last byte
+    # of the message.
+    # The last byte must be in the range [0x01, block_size].
+    # We test for a particular byte by trying to turn it into a 0x01.
+    # We'll check each of the numbers from 2 to blocksize first.
+
+    for c in range(2, block_size + 1):
+        mask = bytes([0]*(block_size-1) + [c ^ 1])
+        blocks[-2] = block_xor(cipher_blocks[-2], mask)
+        if oracle(b''.join(blocks)) == b'good':
+            break
+    # We can't really test for the 0x01 byte so if it's not one of the others
+    # we assume it's a 1. This is safe as long as we know the message is padded 
+    # according to pkcs7
+    else:
+        c = 1
+    decrypted_block = bytes(c*[c])
+
+    ############################
+    #### Decrypt end blocks ####
+    ############################
+    # Now we determine all the bytes in the blocks starting at the end and
+    # working backwards.
+    for cipher_block in cipher_blocks[-2::-1]:
+        for i in range(block_size - len(decrypted_block) - 1, -1, -1):
+            # The value that we want to get as padding
+            pad_value = block_size - i
+            # The following will xor onto the plaintext, giving the desired padding.
+            plain_mask = block_xor(
+                bytes([pad_value]) * len(decrypted_block),
+                decrypted_block
+            )
+            # Don't want to touch the bytes at the beginning yet.
+            zero_mask = bytes(i)
+            for c in range(256):
+                mask = zero_mask + bytes([c]) + plain_mask
+                blocks[-2] = block_xor(cipher_block, mask)
+                if oracle(b''.join(blocks)) == b'good':
+                    # c ^ plaintext == pad_value
+                    # so plaintext == c ^ pad_value
+                    decrypted_block = bytes([c ^ pad_value]) + decrypted_block
+                    break
+            else:
+                raise RuntimeError(dedent("""Padding oracle attack failed!
+                    Something has gone terribly wrong!! 
+                    This could be because the oracle you provided is not in the correct mode or perhaps because they don't use pkcs#7 padding. Or maybe because of some error in my code."""))
+        decrypted_message = decrypted_block + decrypted_message
+        decrypted_block = b''
+        blocks.pop()
+        blocks[-1] = cipher_block
+
+    # #############################
+    # #### Decrypt first block ####
+    # #############################
+    # original_iv = oracle.iv
+    # cipher_block = original_iv
+    # for i in range(block_size)[::-1]:
+    #     # The value that we want to get as padding
+    #     pad_value = block_size - i
+    #     plain_mask = block_xor(
+    #         bytes([pad_value]) * len(decrypted_block),
+    #         decrypted_block
+    #     )
+
+    #     zero_mask = bytes(i)
+    #     for c in range(256):
+    #         mask = zero_mask + bytes([c]) + plain_mask
+    #         oracle.set_iv(block_xor(cipher_block, mask))
+    #         if oracle(blocks[0]) == b'good':
+    #             # c ^ plaintext == pad_value
+    #             # so plaintext == c ^ pad_value
+    #             decrypted_block = bytes([c ^ pad_value]) + decrypted_block
+    #             break
+    #     else:
+    #         raise RuntimeError(dedent("""Padding oracle attack failed!
+    #             Something has gone terribly wrong!! This could be because the oracle you provided is not in the correct mode or perhaps because they don't use pkcs#7 padding. Or maybe because of some error in the code."""))
+
+    # decrypted_message = decrypted_block + decrypted_message
+
+    # assert len(decrypted_message) == len(message)
+
+    return decrypted_message

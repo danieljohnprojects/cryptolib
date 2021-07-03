@@ -6,15 +6,18 @@ from ..utils.byteops import bytes_to_blocks
 class ECBDecrypt(Oracle):
     def __init__(self,
                  algorithm: str,
-                 key: bytes):
-        self._engine = engine_generators[algorithm.lower()](key)
-        self.block_size = self._engine.block_size
+                 key: bytes,
+                 **kwargs):
+        engine = engine_generators[algorithm.lower()](key)
+        kwargs['engine'] = engine
+        kwargs['block_size'] = engine.block_size
+        super().__init__(**kwargs)
 
     def __call__(self, message: bytes) -> bytes:
-        message_blocks = bytes_to_blocks(message, self.block_size)
+        message_blocks = bytes_to_blocks(message, self.state['block_size'])
         plain_blocks = []
         for block in message_blocks:
-            plain_block = self._engine.decrypt(block)
+            plain_block = self.state['engine'].decrypt(block)
             plain_blocks.append(plain_block)
 
         return b''.join(plain_blocks)

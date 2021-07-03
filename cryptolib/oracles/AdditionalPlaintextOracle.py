@@ -1,9 +1,10 @@
-from cryptolib.pipes.GenIV import GenIV
+import random
+
 from typing import Optional
 
-from .Oracle import Oracle
 from .SequentialOracle import SequentialOracle
-from ..pipes import ECBEncrypt, CBCEncrypt, PadPKCS7, GenIV
+from ..pipes import ECBEncrypt, CBCEncrypt, AddIV
+from ..utils.padding import pkcs7
 
 
 class AdditionalPlaintextOracle(SequentialOracle):
@@ -21,28 +22,33 @@ class AdditionalPlaintextOracle(SequentialOracle):
                  mode: str = 'ecb',
                  algorithm: str = "AES",
                  key: Optional[bytes] = None,
-                 fix_iv: bool = False
-                 ):
-        if mode == 'ecb':
-            pipeline = [
-                Oracle(lambda message: secret_prefix + message + secret_suffix),
-                PadPKCS7(),
-                ECBEncrypt(algorithm, key)
-            ]
+                 iv_seed: int = None,
+                 fix_iv: bool = False,
+                 **kwargs):        
+        pipeline = [lambda message: secret_prefix + message + secret_suffix]
+    
+        if mode.lower() == 'ecb':
+            engine_pipe = ECBEncrypt(algorithm, key)
+        elif mode.lower() == 'cbc':
+            engine_pipe = CBCEncrypt(algorithm, key)
         else:
-            pipeline = []
-            if mode == 'cbc':
-                engine = CBCEncrypt(algorithm, key)
+            raise ValueError(f"{mode} mode is not supported.")
+
+        block_size = engine_pipe.state['block_size']
+        pad_pipe = lambda message: pkcs7(message, block_size)
+
+        pipeline.append(pad_pipe)
+        
+        if mode.lower() != 'ecb':
+            if fix_iv:
+                random.seed(iv_seed)
+                iv = random.randbytes(block_size)
+                iv_pipe = lambda message: iv + message
+                pipeline.append(iv_pipe)
             else:
-                raise ValueError(f"Mode {mode} is not supported.")
+                pipeline.append(AddIV(block_size, iv_seed))
+        
+        pipeline.append(engine_pipe)
 
-            if not fix_iv:
-                pipeline += [GenIV(engine.block_size)]
-            pipeline += [
-                Oracle(lambda message: secret_prefix + message + secret_suffix),
-                PadPKCS7(),
-                engine
-            ]
-
-        super().__init__(pipeline)
+        super().__init__(pipeline, **kwargs)
 
