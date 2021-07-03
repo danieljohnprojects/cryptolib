@@ -1,7 +1,7 @@
 from random import Random
-from ..oracles import Oracle
+from .Pipe import Pipe
 
-class AddIV(Oracle):
+class AddIV(Pipe):
     """
     Generates a new random IV that is prepended to the front of each message.
     

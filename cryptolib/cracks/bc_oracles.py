@@ -12,14 +12,15 @@ The attacks in this module assume the following model for oracles:
 from functools import reduce
 from math import gcd
 from textwrap import dedent
-from typing import Callable, Optional, Tuple
+from typing import Optional, Tuple
 
-from ..oracles import Oracle, AdditionalPlaintextOracle, PaddingOracle
+from ..oracles import AdditionalPlaintextOracle, PaddingOracle
+from ..pipes import Pipe
 from ..utils.byteops import block_xor, bytes_to_blocks
 
 
 def get_block_size(
-        oracle: Oracle,
+        oracle: Pipe,
         max_size: int = 20,
         allowable_bytes: Optional[bytes] = b'') -> int:
     """
@@ -54,7 +55,7 @@ def get_block_size(
 
 
 def uses_ECB(
-        oracle: Oracle,
+        oracle: Pipe,
         block_size: int = 16,
         allowable_bytes: Optional[bytes] = b'') -> bool:
     """
@@ -87,7 +88,7 @@ def uses_ECB(
 
 
 def get_additional_message_len(
-        oracle: Oracle,
+        oracle: Pipe,
         block_size: int = 16,
         allowable_bytes: Optional[bytes] = b'') -> Tuple[int, int]:
     """
@@ -250,12 +251,13 @@ def decrypt_with_padding_oracle(
         raise NotImplementedError(
             "Padding attacks are currently only implemented for CBC mode.")
 
-    # We need a convenient way of setting the iv in the oracle 
+    # We need a convenient way of setting the iv in the oracle
 
     # We need to use this over and over so make it read only
     cipher_blocks = tuple(bytes_to_blocks(message, block_size))
     if len(cipher_blocks) < 2:
-        raise ValueError(f"Ciphertext must consist of at least two blocks, the first being the IV. Got {len(cipher_blocks)}.")
+        raise ValueError(
+            f"Ciphertext must consist of at least two blocks, the first being the IV. Got {len(cipher_blocks)}.")
 
     # We'll overwrite this copy a bunch
     blocks = list(cipher_blocks)
@@ -277,7 +279,7 @@ def decrypt_with_padding_oracle(
         if oracle(b''.join(blocks)) == b'good':
             break
     # We can't really test for the 0x01 byte so if it's not one of the others
-    # we assume it's a 1. This is safe as long as we know the message is padded 
+    # we assume it's a 1. This is safe as long as we know the message is padded
     # according to pkcs7
     else:
         c = 1
@@ -315,35 +317,5 @@ def decrypt_with_padding_oracle(
         decrypted_block = b''
         blocks.pop()
         blocks[-1] = cipher_block
-
-    # #############################
-    # #### Decrypt first block ####
-    # #############################
-    # original_iv = oracle.iv
-    # cipher_block = original_iv
-    # for i in range(block_size)[::-1]:
-    #     # The value that we want to get as padding
-    #     pad_value = block_size - i
-    #     plain_mask = block_xor(
-    #         bytes([pad_value]) * len(decrypted_block),
-    #         decrypted_block
-    #     )
-
-    #     zero_mask = bytes(i)
-    #     for c in range(256):
-    #         mask = zero_mask + bytes([c]) + plain_mask
-    #         oracle.set_iv(block_xor(cipher_block, mask))
-    #         if oracle(blocks[0]) == b'good':
-    #             # c ^ plaintext == pad_value
-    #             # so plaintext == c ^ pad_value
-    #             decrypted_block = bytes([c ^ pad_value]) + decrypted_block
-    #             break
-    #     else:
-    #         raise RuntimeError(dedent("""Padding oracle attack failed!
-    #             Something has gone terribly wrong!! This could be because the oracle you provided is not in the correct mode or perhaps because they don't use pkcs#7 padding. Or maybe because of some error in the code."""))
-
-    # decrypted_message = decrypted_block + decrypted_message
-
-    # assert len(decrypted_message) == len(message)
 
     return decrypted_message

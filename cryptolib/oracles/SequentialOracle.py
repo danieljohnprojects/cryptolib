@@ -1,8 +1,8 @@
 from typing import Callable, Sequence
-from .Oracle import Oracle
+from ..pipes import Pipe
 
 
-class SequentialOracle(Oracle):
+class SequentialOracle(Pipe):
     """A pipeline of components each taking and returning a byte string.
 
     An oracle takes in some input and divines from it some output from it. After instantiation an oracle object should be treated like a black box. All interaction should generally be with the divine method. Ideally an oracle should have no other easily accesible methods.
@@ -17,18 +17,18 @@ class SequentialOracle(Oracle):
         super().__init__(**kwargs)
         
         for pipe in self.state['pipeline']:
-            if isinstance(pipe, Oracle):
+            if isinstance(pipe, Pipe):
                 pipe.state['parent'] = self
 
     def prepend_pipe(self, pipe: Callable):
         """Adds a pipe to the beginning of the pipeline."""
-        if isinstance(pipe, Oracle):
+        if isinstance(pipe, Pipe):
             pipe.state['parent'] = self
         self.state['pipeline'] = [pipe] + self.state['pipeline']
 
     def append_pipe(self, pipe: Callable):
         """Adds a pipe to the end of the pipeline."""
-        if isinstance(pipe, Oracle):
+        if isinstance(pipe, Pipe):
             pipe.state['parent'] = self
         self.state['pipeline'] += [pipe]
 

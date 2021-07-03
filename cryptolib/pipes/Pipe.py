@@ -1,10 +1,7 @@
-
-
-
 from abc import ABC, abstractmethod
 
 
-class Oracle(ABC):
+class Pipe(ABC):
     """
     An oracle is essentially a function that maintains it's own state between calls.
 
@@ -16,6 +13,7 @@ class Oracle(ABC):
 
     Oracles can contain other oracles, this is useful to facilitate communication of state parameters between oracles.
     """
+
     def __init__(self, **kwargs):
         self.state = kwargs
 
