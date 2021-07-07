@@ -80,7 +80,7 @@ def score(plaintext: bytes,
         scorer = scoring_systems['scrabble']
     score = 0
     for b in plaintext:
-        c = chr(b)
+        c = chr(b).lower()
         if c in scorer.keys():
             score += scorer[c]
         elif c in printable:
