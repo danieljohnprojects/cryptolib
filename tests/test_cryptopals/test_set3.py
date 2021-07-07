@@ -3,9 +3,10 @@ import pytest
 import base64
 
 from cryptolib.cracks.bc_oracles import decrypt_with_padding_oracle
+from cryptolib.cracks.two_time_pad import decrypt_two_time_pad
 from cryptolib.pipes import CTR
 from cryptolib.utils.padding import strip_pkcs7
-from .data import challenge17
+from .data import challenge17, challenge19, challenge20
 
 
 def test_Challenge17():
@@ -102,3 +103,45 @@ def test_Challenge18():
     decrypted = oracle(nonce + message)
 
     assert decrypted == b"Yo, VIP Let's kick it Ice, Ice, baby Ice, Ice, baby "
+
+def test_Challenge19():
+    """
+    Take your CTR encrypt/decrypt function and fix its nonce value to 0. Generate a random AES key.
+
+    In successive encryptions (not in one big running CTR stream), encrypt each line of the base64 decodes of the following, producing multiple independent ciphertexts: 
+
+    (This should produce 40 short CTR-encrypted ciphertexts).
+
+    Because the CTR nonce wasn't randomized for each encryption, each ciphertext has been encrypted against the same keystream. This is very bad.
+
+    Understanding that, like most stream ciphers (including RC4, and obviously any block cipher run in CTR mode), the actual "encryption" of a byte of data boils down to a single XOR operation, it should be plain that: 
+    CIPHERTEXT-BYTE XOR PLAINTEXT-BYTE = KEYSTREAM-BYTE
+
+    And since the keystream is the same for every ciphertext:
+
+    CIPHERTEXT-BYTE XOR KEYSTREAM-BYTE = PLAINTEXT-BYTE (ie, "you don't
+    say!")
+
+    Attack this cryptosystem piecemeal: guess letters, use expected English language frequence to validate guesses, catch common English trigrams, and so on. 
+    """
+    ciphertexts = challenge19.ciphertexts
+    plaintexts, _ = decrypt_two_time_pad(ciphertexts)
+    for pt, message in zip(plaintexts, challenge19.messages):
+        assert pt[:10] == message[:10]
+
+def test_Challenge20():
+    """
+    In this file find a similar set of Base64'd plaintext. Do with them exactly what you did with the first, but solve the problem differently.
+
+    Instead of making spot guesses at to known plaintext, treat the collection of ciphertexts the same way you would repeating-key XOR.
+
+    Obviously, CTR encryption appears different from repeated-key XOR, but with a fixed nonce they are effectively the same thing.
+
+    To exploit this: take your collection of ciphertexts and truncate them to a common length (the length of the smallest ciphertext will work).
+
+    Solve the resulting concatenation of ciphertexts as if for repeating- key XOR, with a key size of the length of the ciphertext you XOR'd. 
+    """
+    ciphertexts = challenge20.ciphertexts
+    plaintexts, _ = decrypt_two_time_pad(ciphertexts)
+    for pt, message in zip(plaintexts, challenge20.messages):
+        assert pt[:10] == message[:10]
