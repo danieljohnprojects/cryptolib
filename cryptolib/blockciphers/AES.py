@@ -1,7 +1,6 @@
-import os
 from ctypes import *
 from .Engine import Engine
-
+from ..utils.files import build_filename
 
 class AES(Engine):
     """
@@ -14,21 +13,18 @@ class AES(Engine):
     - decrypt: Takes in a block of encrypted bytes and decrypts it.
     """
 
-    # Path to C library containing encrypt, decrypt and key initialisation
-    # functions.
-    _path_to_AES_libs = '/home/daniel/projects/cryptolib/build/lib/AES'
     block_size = 16
 
     def __init__(self, key: bytes):
         # Key can be either 128, 192, or 256 bits long.
         if len(key) == 16:
-            libpath = os.path.join(self._path_to_AES_libs, "libaes128.so")
+            libpath = build_filename('build/AES/libaes128.so')
             key_schedule_len = 16 * 11  # 10 rounds plus initial key of 16 bytes
         elif len(key) == 24:
-            libpath = os.path.join(self._path_to_AES_libs, "libaes192.so")
+            libpath = build_filename('build/AES/libaes192.so')
             key_schedule_len = 16 * 13  # 12 rounds plus initial key of 16 bytes
         elif len(key) == 32:
-            libpath = os.path.join(self._path_to_AES_libs, "libaes256.so")
+            libpath = build_filename('build/AES/libaes256.so')
             key_schedule_len = 16 * 15  # 14 rounds plus initial key of 16 bytes
         else:
             raise ValueError(
