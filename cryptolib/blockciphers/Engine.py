@@ -1,4 +1,4 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
 
 class Engine(ABC):
@@ -16,14 +16,14 @@ class Engine(ABC):
 
     block_size = None
 
-    @abstractclassmethod
+    @abstractmethod
     def __init__(self, key: bytes):
         pass
 
-    @abstractclassmethod
+    @abstractmethod
     def encrypt(self, message: bytes) -> bytes:
         pass
 
-    @abstractclassmethod
+    @abstractmethod
     def decrypt(self, ciphertext: bytes) -> bytes:
         pass
