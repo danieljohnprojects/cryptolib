@@ -16,7 +16,7 @@ class MT19937(RNG):
             if (seed < 0) or (seed >= 2**32):
                 raise ValueError(f"Seed must be a positive integer that can be represented in 4 bytes (got {seed}).")
         elif isinstance(seed, bytes):
-            if len(seed) != 4:
+            if len(seed) > 4:
                 raise ValueError(f"Seed must be four bytes long, got {len(seed)}.")
             seed = int.from_bytes(seed, 'big')
         else:
