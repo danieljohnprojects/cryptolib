@@ -41,6 +41,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <MT.h>
 
@@ -53,9 +54,15 @@
  */
 void set_seed(uint32_t seed, uint32_t state[N])
 {
+    // printf("Received seed %d\n", seed);
     state[0] = seed;
     for (int i = 1; i < N; i++)
         state[i] = F * (state[i-1] ^ (state[i-1] >> (W-2))) + i;
+    // printf("First four numbers in state:\n");
+    // printf("%u\n", state[0]);
+    // printf("%u\n", state[1]);
+    // printf("%u\n", state[2]);
+    // printf("%u\n", state[3]);
 }
 
 /**
