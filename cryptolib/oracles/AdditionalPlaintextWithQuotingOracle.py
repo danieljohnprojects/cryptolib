@@ -11,6 +11,7 @@ class AdditionalPlaintextWithQuotingOracle(AdditionalPlaintextOracle):
     """
 
     def __init__(self, quote_chars: bytes = b'', **kwargs):
+        
         super().__init__(**kwargs)
         for char in quote_chars:
             b = bytes([char])

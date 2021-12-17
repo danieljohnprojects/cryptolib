@@ -24,7 +24,8 @@ class AdditionalPlaintextOracle(SequentialOracle):
                  key: Optional[bytes] = None,
                  iv_seed: int = None,
                  fix_iv: bool = False,
-                 **kwargs):        
+                 **kwargs):
+                        
         pipeline = [lambda message: secret_prefix + message + secret_suffix]
     
         if mode.lower() == 'ecb':

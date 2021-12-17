@@ -4,6 +4,14 @@ from ..utils.byteops import block_xor, bytes_to_blocks
 
 
 class CBCEncrypt(ECBEncrypt):
+    """
+    A pipe that encrypts strings of bytes using the specified algorithm in CBC mode.
+
+    Messages must be padded out to the correct length before being passed to the pipe.
+
+    The first block of the message string is used as the IV.
+    """
+
     def __call__(self, message: bytes) -> bytes:
         """
         Encrypts a message in CBC mode, treating the first block as an IV. 

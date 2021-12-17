@@ -16,6 +16,7 @@ class PaddingOracle(SequentialOracle):
                  algorithm: str,
                  key: bytes,
                  **kwargs):
+                 
         pipeline = []
         if mode == 'ecb':
             pipeline.append(ECBDecrypt(algorithm, key))

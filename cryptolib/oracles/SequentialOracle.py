@@ -3,9 +3,10 @@ from ..pipes import Pipe
 
 
 class SequentialOracle(Pipe):
-    """A pipeline of components each taking and returning a byte string.
+    """
+    A pipeline of components each taking and returning a byte string.
 
-    An oracle takes in some input and divines from it some output from it. After instantiation an oracle object should be treated like a black box. All interaction should generally be with the divine method. Ideally an oracle should have no other easily accesible methods.
+    An oracle takes in some input and divines from it some output. After instantiation an oracle object should be treated like a black box and should only be interacting with by calling the oracle on data. Ideally an oracle should have no other easily accesible methods.
 
     In practice other methods may be necessary for example to change the IV ov an encryption pipe.
 
@@ -13,6 +14,7 @@ class SequentialOracle(Pipe):
     """
 
     def __init__(self, pipeline: Sequence[Callable], **kwargs):
+        """Initialise an oracle using the given sequence of pipes."""
         kwargs['pipeline'] = pipeline
         super().__init__(**kwargs)
         
@@ -33,6 +35,7 @@ class SequentialOracle(Pipe):
         self.state['pipeline'] += [pipe]
 
     def __call__(self, message: bytes) -> bytes:
+        """Call each pipe in the pipeline, passing the output from one as input to the next."""
         for pipe in self.state['pipeline']:
             message = pipe(message)
         return message

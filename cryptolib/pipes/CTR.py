@@ -3,7 +3,18 @@ from .ECBEncrypt import ECBEncrypt
 from ..utils.byteops import block_xor, bytes_to_blocks
 
 class CTR(ECBEncrypt):
-    def __init__(self, *args, nonce_size=8, ctr_endianness: str = 'little', **kwargs):
+    """
+    A pipe that encrypts strings of bytes using the specified algorithm in CTR mode.
+
+    Messages must be prefixed with a nonce of appropriate length.
+    """
+
+    def __init__(self, 
+                *args, 
+                nonce_size=8, 
+                ctr_endianness: str = 'little', 
+                **kwargs):
+
         super().__init__(*args, **kwargs)
         block_size = self.state['block_size']
         if nonce_size < 1 or nonce_size >= block_size:
