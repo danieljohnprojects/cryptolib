@@ -5,11 +5,15 @@ from ..utils.byteops import bytes_to_blocks
 
 
 class ECBDecrypt(Pipe):
+    """
+    A pipe that decrypts strings of bytes using the specified algorithm in ECB mode.
+    """
+
     def __init__(self,
                  algorithm: str,
                  key: bytes,
                  **kwargs):
-        engine = engine_generators[algorithm.lower()](key)
+        engine = engine_generators[algorithm.lower()][0](key)
         kwargs['engine'] = engine
         kwargs['block_size'] = engine.block_size
         super().__init__(**kwargs)
