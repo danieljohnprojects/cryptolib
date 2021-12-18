@@ -47,3 +47,24 @@ def exhaust_seed(
             return int.from_bytes(seed, 'big')
     else:
         raise RuntimeError("No seed found in the given range.")
+
+def replicate_MT19937_state(output):
+    """
+    Replicates the internal state of a Mersenne twister RNG using the first 624 outputs.
+    """
+    assert len(output) == 624
+    assert all(x >= 0 for x in output)
+    assert all(x < 2**32 for x in output)
+
+    state = map(lambda x: x^(x>>18), output) # Undo y=y^(y>>L)
+    state = map(lambda x: (((x>>17) ^ ((((x&0x1ffff)>>1)&0xefc6)>>1)) << 17) ^ (x&0x1ffff), state) # Undo y ^= (y<<T) & C
+    B = 0x9D2C5680
+
+
+
+    state = map(lambda x: (x&0x7f) ^ # bits [25..31]
+                          (((x&0x7f)<<7)&B) ^ (x&0x3f80) ^ # bits [18..24]
+                          ((( ((((x&0x7f)<<7)&B) ^ (x&0x3f80)) <<7)&B) ^ (x&0x1fc000)) ^ # bits [11..17]
+                          ((( (((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000)) <<7)&B) ^ (x & 0xfe00000)) ^ # bits [4..10]
+                          ( (((((((((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000))<<7)&B)^(x&0xfe00000)) & 0x01e00000) <<7)&B) ^ (x & 0xf0000000)), # bits [0..3]
+                state)
