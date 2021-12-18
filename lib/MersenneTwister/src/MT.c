@@ -94,7 +94,7 @@ uint32_t extract32(uint32_t state[N], int index)
     assert(index > -1);
 
     uint32_t y = state[index];
-    y ^= (y >> U) & D;
+    y ^= (y >> U) & D; // No effect for 32 bit version
     y ^= (y << S) & B;
     y ^= (y << T) & C;
 
