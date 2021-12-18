@@ -5,3 +5,4 @@ from .CBCDecrypt import CBCDecrypt
 from .CBCEncrypt import CBCEncrypt
 from .CTR import CTR
 from .AddIV import AddIV
+from .RandomBytes import RandomBytes
