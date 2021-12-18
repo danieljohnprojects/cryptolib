@@ -1,10 +1,14 @@
 import pytest
 
 import base64
+import time
+import random
 
 from cryptolib.cracks.bc_oracles import decrypt_with_padding_oracle
+from cryptolib.cracks.rngs import exhaust_seed
 from cryptolib.cracks.two_time_pad import decrypt_two_time_pad
 from cryptolib.pipes import CTR
+from cryptolib.rngs import MT19937
 from cryptolib.utils.padding import strip_pkcs7
 from .data import challenge17, challenge19, challenge20
 
@@ -145,3 +149,40 @@ def test_Challenge20():
     plaintexts, _ = decrypt_two_time_pad(ciphertexts)
     for pt, message in zip(plaintexts, challenge20.messages):
         assert pt[:10] == message[:10]
+
+def test_Challenge21():
+    """    
+    Implement the MT19937 Mersenne Twister RNG
+
+    You can get the psuedocode for this from Wikipedia.
+
+    If you're writing in Python, Ruby, or (gah) PHP, your language is probably already giving you MT19937 as "rand()"; don't use rand(). Write the RNG yourself.
+    """
+    pass
+
+def test_Challenge22():
+    """
+     Make sure your MT19937 accepts an integer seed value. Test it (verify that you're getting the same sequence of outputs given a seed).
+
+    Write a routine that performs the following operation:
+
+        Wait a random number of seconds between, I don't know, 40 and 1000.
+        Seeds the RNG with the current Unix timestamp
+        Waits a random number of seconds again.
+        Returns the first 32 bit output of the RNG.
+
+    You get the idea. Go get coffee while it runs. Or just simulate the passage of time, although you're missing some of the fun of this exercise if you do that.
+
+    From the 32 bit RNG output, discover the seed. 
+    """
+    t = int(time.time())
+    r = 50000
+    seed = random.randint(t - r, t + r)
+    # seed = random.randint(0,2**32 - 1)
+    rng = MT19937(seed)
+    first_output = rng.rand()
+    second_output = rng.rand()
+    target_output = first_output + second_output
+
+    assert seed == exhaust_seed(target_output, guess=t-r, guess_high=t+r)
+    # assert seed == crack_seed(target_output)
