@@ -3125,12 +3125,14 @@ expected_out = [
     2075689920,
 ]
 
+expected_out = list(map(lambda x: x.to_bytes(4, 'big'), expected_out))
+
 def test_int_seed():
     rng = MT19937(5489)
     for i in range(5*624):
-        assert(rng.rand32() == expected_out[i])
+        assert(rng.rand() == expected_out[i])
 
 def test_bytes_seed():
-    rng = MT19937(b'\x15\x71') # 5489 == 0x1571
+    rng = MT19937(b'\x00\x00\x15\x71') # 5489 == 0x1571
     for i in range(5*624):
-        assert(rng.rand32() == expected_out[i])
+        assert(rng.rand() == expected_out[i])

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
-
-class RNG(ABC):
+class RNGEngine(ABC):
     """
     An abstract class for random number generators.
 
@@ -11,14 +10,10 @@ class RNG(ABC):
     def __init__(self, seed: bytes):
         pass
 
-    def rand32(self):
+    def rand(self) -> bytes:
         """
-        Generates a uniform random string of 32 bits.
-        """
-        raise NotImplementedError
+        Generate a random string of bytes.
 
-    def rand64(self):
-        """
-        Generates a uniform random string of 64 bits.
+        The length of the string is algorithm dependent.
         """
         raise NotImplementedError
