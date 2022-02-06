@@ -50,21 +50,54 @@ def exhaust_seed(
 
 def replicate_MT19937_state(output):
     """
-    Replicates the internal state of a Mersenne twister RNG using the first 624 outputs.
+    Replicates the internal state of a Mersenne twister RNG using the first 624 32-bit outputs.
+
+    The input to this function should be a sequence of 624 4-byte integers coming from an MT19937 rng. This function will only work if the RNG does not "twist" at any time during the output.
     """
     assert len(output) == 624
     assert all(x >= 0 for x in output)
     assert all(x < 2**32 for x in output)
 
-    state = map(lambda x: x^(x>>18), output) # Undo y=y^(y>>L)
-    state = map(lambda x: (((x>>17) ^ ((((x&0x1ffff)>>1)&0xefc6)>>1)) << 17) ^ (x&0x1ffff), state) # Undo y ^= (y<<T) & C
+    undo4 = lambda x: x^(x>>18)
+    state3 = list(map(undo4, output)) # Undo y=y^(y>>L)
+
+    def undo3(x):
+        a = x&0x1ffff
+        b = ((a>>1)&0xefc6)>>1
+        return (((x>>17) ^ b) << 17) ^ a
+
+    # state2 = list(map(lambda x: (((x>>17) ^ ((((x&0x1ffff)>>1)&0xefc6)>>1)) << 17) ^ (x&0x1ffff), state3)) # Undo y ^= (y<<T) & C
+    state2 = list(map(undo3, state3))
+    
     B = 0x9D2C5680
 
+    def undo2(x):
+        a = x&0x7f          # bits [25..31]
+        b = x&0x3f80
+        c = ((a<<7)&B) ^ b  # bits [18..24]
+        d = (x&0x1fc000)
+        e = ((c<<7)&B) ^ d  # bits [11..17]
+        f = (x & 0xfe00000)
+        g = ((e<<7)&B) ^ f  # bits [4..10]
+        h = (x & 0xf0000000)
+        i = ((g<<7)&B) ^ h  # bits [0..3]
+        return i ^ g ^ e ^ c ^ a
+    # state1 = list(map(lambda x: (x&0x7f) ^ # bits [25..31]
+    #                       (((x&0x7f)<<7)&B) ^ (x&0x3f80) ^ # bits [18..24]
+    #                       ((( ((((x&0x7f)<<7)&B) ^ (x&0x3f80)) <<7)&B) ^ (x&0x1fc000)) ^ # bits [11..17]
+    #                       ((( (((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000)) <<7)&B) ^ (x & 0xfe00000)) ^ # bits [4..10]
+    #                       ( (((((((((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000))<<7)&B)^(x&0xfe00000)) & 0x01e00000) <<7)&B) ^ (x & 0xf0000000)), # bits [0..3]
+    #             state2))
 
+    state1 = list(map(undo2, state2))
+    
+    U = 11
+    def undo1(x):
+        a = x>>21
+        b = ((x>>10)&0x7ff) ^ a
+        c = (x&0x3ff) ^ (b>>1)
+        return (a<<21) ^ (b<<10) ^ c
+    state = list(map(undo1, state1))
 
-    state = map(lambda x: (x&0x7f) ^ # bits [25..31]
-                          (((x&0x7f)<<7)&B) ^ (x&0x3f80) ^ # bits [18..24]
-                          ((( ((((x&0x7f)<<7)&B) ^ (x&0x3f80)) <<7)&B) ^ (x&0x1fc000)) ^ # bits [11..17]
-                          ((( (((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000)) <<7)&B) ^ (x & 0xfe00000)) ^ # bits [4..10]
-                          ( (((((((((((((x&0x7f)<<7)&B)^(x&0x3f80))<<7)&B)^(x&0x1fc000))<<7)&B)^(x&0xfe00000)) & 0x01e00000) <<7)&B) ^ (x & 0xf0000000)), # bits [0..3]
-                state)
+    # return list(zip(state, state1, state2, state3, output))
+    return state
