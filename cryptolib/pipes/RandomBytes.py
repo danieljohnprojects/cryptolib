@@ -2,7 +2,7 @@ from math import ceil
 
 from .Pipe import Pipe
 
-from ..rngs import RNG_generators
+# from ..rngs import RNG_generators
 
 class RandomBytes(Pipe):
     """
@@ -12,40 +12,44 @@ class RandomBytes(Pipe):
     """
 
     def __init__(self,
-                 algorithm: str,
+                 rng_generator: callable,
                  output_length: int,
                  offset: int = 0,
                  **kwargs):
-        
-        if algorithm.lower() not in RNG_generators:
-            raise ValueError(f"Algorithm {algorithm} not supported. Must be one of {list(RNG_generators.keys())}")
+        """
+        Arguments:
+            algorithm - the rng algorithm used to produce the bytes
+            output_length - the number of bytes to produce
+            offset - the byte offset to begin producing bytes at
+        """
+        # if algorithm.lower() not in RNG_generators:
+        #     raise ValueError(f"Algorithm {algorithm} not supported. Must be one of {list(RNG_generators.keys())}")
 
-        engine_generator = RNG_generators[algorithm.lower()]
-        seed_length = engine_generator.seed_length
+        # engine_generator = RNG_generators[algorithm.lower()]
 
         if output_length < 1:
             raise ValueError(f"Output length must be positive. Got {output_length}.")
         if offset < 0:
             raise ValueError(f"Offset must be non-negative. Got {offset}.")
 
-        # Determine how many blocks in total are needed
-        total_blocks = ceil(offset + output_length / engine_generator.output_length)
+        # Determine how many calls to the rng are needed
+        total_calls = ceil(offset + output_length / rng_generator.int_length)
 
-        kwargs['engine_generator'] = engine_generator
-        kwargs['seed_length'] = seed_length
-        kwargs['total_blocks'] = total_blocks
+        kwargs['rng_generator'] = rng_generator
+        kwargs['total_calls'] = total_calls
         kwargs['output_length'] = output_length
         kwargs['offset'] = offset
 
         super().__init__(**kwargs)
 
 
-    def __call__(self, seed: bytes) -> bytes:
-
-        rng = self.state['engine_generator'](seed)
+    def __call__(self, seed: bytes) -> list[int]:
+        seed = int.from_bytes(seed, 'little')
+        rng = self.state['rng_generator'](seed)
         generated = b''
-        for _ in range(self.state['total_blocks']):
-            generated += rng.rand()
+        for _ in range(self.state['total_calls']):
+            x = rng.rand()
+            generated += x.to_bytes(rng.int_length, 'little')
         
         return generated[self.state['offset']: self.state['offset'] + self.state['output_length']]
         

@@ -180,11 +180,9 @@ def test_Challenge22():
     seed = random.randint(t - r, t + r)
     # seed = random.randint(0,2**32 - 1)
     rng = MT19937(seed)
-    first_output = rng.rand()
-    second_output = rng.rand()
-    target_output = first_output + second_output
+    target_output = [rng.rand(), rng.rand()]
 
-    assert seed == exhaust_seed(target_output, guess=t-r, guess_high=t+r)
+    assert seed == exhaust_seed(target_output, guess_low=t-r, guess_high=t+r+1)
     # assert seed == crack_seed(target_output)
 
 def test_Challenge23():

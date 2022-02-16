@@ -7,12 +7,14 @@ from cryptolib.rngs import MT19937
 random.seed(0)
 
 def test_exhaust_seed():
-    seed = 2**10
-    rng = MT19937(seed)
-    target = rng.rand()
-    
-    x = exhaust_seed(target)
-    assert x == seed
+    pyrng = random.Random(0)
+    for _ in range(10):
+        seed = 100 + pyrng.randint(-50, 50)
+        rng = MT19937(seed)
+        target = [rng.rand() for _ in range(5)]
+        
+        x = exhaust_seed(target, guess_low=50, guess_high=151)
+        assert x == seed
 
 def test_replicate_MT19937_state():
     # # example_state = [random.randint(0,2**32-1) for _ in range(624)]

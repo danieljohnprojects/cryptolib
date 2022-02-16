@@ -1,18 +1,19 @@
+from functools import reduce
 from typing import Sequence
 
 from ..pipes import RandomBytes
-from ..rngs import MT19937
+from ..rngs import MT19937, RNG_generators
 
 
 def exhaust_seed(
         target_output: Sequence[int], #bytes,
         rng_type: str='MT19937',
-        guess: int = 0,
+        guess_low: int = 0,
         guess_high: int = None,
         offset: int = 0,
     ) -> int:
     """
-    Takes a target string of bytes and searches for a seed for which the output of the specified RNG matches the target.
+    Takes a target sequence of integers and searches for a seed for which the output of the specified RNG matches the target.
 
     This is a simple exhaust over all possible seeds. If an approximate seed is known (for example if the RNG was seeded with the system time) a starting guess can be passed in. 
 
@@ -23,32 +24,40 @@ def exhaust_seed(
     Inputs:
         The output of the RNG.
         The type of RNG.
-        Seed estimate.
-        Range.
+        A lower bound on the seed.
+        An upper bound on the seed.
         The output stream offset.
 
     Output:
     The seed value that produces matching output or None if no seed was found in the required range.
     """
 
-    output_len = len(target_output)
+    if rng_type.lower() not in RNG_generators:
+        raise ValueError(f"Algorithm {rng_type} not supported. Must be one of {list(RNG_generators.keys())}")
 
-    # Pipe performs value checking offset
-    pipe = RandomBytes(rng_type, output_len, offset) 
+    rng_generator = RNG_generators[rng_type.lower()]
 
-    max_int = (2**8)**pipe.state['seed_length'] - 1
+    if (guess_low < 0) or (guess_low > rng_generator.max_int):
+        raise ValueError(f"Lower bound on guess must be between 0 and {rng_generator.max_int}. Got {guess_low}.")
 
-    if not guess_high:
-        guess_high = max_int
+    if guess_high is None:
+        guess_high = rng_generator.max_int
+    elif (guess_high < 1) or (guess_high > rng_generator.max_int):
+        raise ValueError(f"Upper bound on guess must be between 0 and {rng_generator.max_int}. Got {guess_high}.")
 
-    if guess_high > max_int:
-        raise ValueError(f"guess_range has exceeded maximum for the specified rng. Got {guess_high} but maximum is {max_int}.")
+    byte_length = rng_generator.int_length * len(target_output)
+    # Pipe performs value checking of offset
+    pipe = RandomBytes(rng_generator, byte_length, offset) 
+
+    target_output = map(lambda x: int.to_bytes(x, rng_generator.int_length, 'little'), target_output)
+    target_output = reduce(bytes.__add__, target_output)
 
     # Could parallelise this for loop if you wanted.
-    for seed in range(guess, guess_high):
-        seed = seed.to_bytes(pipe.state['seed_length'], 'big')
+    # Would probably need independent pipes.
+    for seed in range(guess_low, guess_high):
+        seed = seed.to_bytes(rng_generator.int_length, 'little')
         if pipe(seed) == target_output:
-            return int.from_bytes(seed, 'big')
+            return int.from_bytes(seed, 'little')
     else:
         raise RuntimeError("No seed found in the given range.")
 
