@@ -1,7 +1,11 @@
+from typing import Sequence
+
 from ..pipes import RandomBytes
+from ..rngs import MT19937
+
 
 def exhaust_seed(
-        target_output: bytes,
+        target_output: Sequence[int], #bytes,
         rng_type: str='MT19937',
         guess: int = 0,
         guess_high: int = None,
@@ -48,29 +52,24 @@ def exhaust_seed(
     else:
         raise RuntimeError("No seed found in the given range.")
 
-def replicate_MT19937_state(output):
-    """
-    Replicates the internal state of a Mersenne twister RNG using the first 624 32-bit outputs.
 
-    The input to this function should be a sequence of 624 4-byte integers coming from an MT19937 rng. This function will only work if the RNG does not "twist" at any time during the output.
+def revert_to_state(output: int) -> int:
     """
-    assert len(output) == 624
-    assert all(x >= 0 for x in output)
-    assert all(x < 2**32 for x in output)
+    Takes a 4-byte integer output of a Mersenne twister rng and pulls it back through the generation process to reveal the state element from which it was originally generated.
+    """
+    assert (output >= 0) and (output < MT19937.max_int)
+    # assert isinstance(output, bytes)
+    # int_output = int.from_bytes(output, 'big')
 
+    # Define functions to undo each step of the MT19937 generation process
     undo4 = lambda x: x^(x>>18)
-    state3 = list(map(undo4, output)) # Undo y=y^(y>>L)
-
     def undo3(x):
         a = x&0x1ffff
         b = ((a>>1)&0xefc6)>>1
         return (((x>>17) ^ b) << 17) ^ a
-
-    state2 = list(map(undo3, state3))
-    
-    B = 0x9D2C5680
-
     def undo2(x):
+        B = 0x9D2C5680
+        
         a = x&0x7f          # bits [25..31]
         b = x&0x3f80
         c = ((a<<7)&B) ^ b  # bits [18..24]
@@ -81,15 +80,37 @@ def replicate_MT19937_state(output):
         h = (x & 0xf0000000)
         i = ((g<<7)&B) ^ h  # bits [0..3]
         return i ^ g ^ e ^ c ^ a
-
-    state1 = list(map(undo2, state2))
-    
     def undo1(x):
         a = x>>21
         b = ((x>>10)&0x7ff) ^ a
         c = (x&0x3ff) ^ (b>>1)
         return (a<<21) ^ (b<<10) ^ c
-    state = list(map(undo1, state1))
 
-    # return list(zip(state, state1, state2, state3, output))
+    # Apply the functions to the output to recover the state
+    state3 = undo4(output)
+    state2 = undo3(state3)
+    state1 = undo2(state2)
+    state = undo1(state1)
+
+    # byte_state = int.to_bytes(state, MT19937.state_element_length, 'big')
+
     return state
+    # return state, state1, state2, state3, int_output
+
+
+def replicate_MT19937_state(output: Sequence[int]) -> MT19937:
+    """
+    Takes the first 624 outputs from a Mersenne twister RNG and constructs a replica of the RNG that generated the output.
+
+    The input to this function should be a sequence of 624 4-byte integers coming from an MT19937 rng. This function will only work if the RNG does not "twist" at any time during the output for example the first 624 outputs of the target RNG can be used.
+
+    The output of the function is an RNG object capable of continuing to generate the same sequence of bytes.
+    """
+    assert len(output) == MT19937.state_array_length
+    assert all(isinstance(x, int) for x in output)
+    assert all((x >= 0) and (x < MT19937.max_int)  for x in output)
+
+    state = list(map(revert_to_state, output))
+
+    clone = MT19937(state)
+    return clone
