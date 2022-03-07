@@ -2,6 +2,7 @@
 Functions for breaking ciphers related to substitution ciphers.
 """
 
+from typing import Optional
 from ..cracks.two_time_pad import decrypt_two_time_pad
 from ..utils.byteops import block_xor, hamming_distance
 from collections.abc import Collection
@@ -9,27 +10,29 @@ from collections.abc import Collection
 
 def decrypt_repeating_key_xor(
         ciphertext: bytes,
-        block_sizes: Collection[int],
-        num_blocks: int = 8) -> bytes:
+        block_sizes: Optional[Collection[int]]=None
+        ) -> bytes:
     """
     Attempts to decrypt a string of bytes assuming a repeating key xor cipher.
 
-    Tries for keys of each length in the block_sizes argument. 
+    If the block_sizes argument is provided only those block sizes will be used, otherwise will try every valid blocks size.
+    """    
 
-    The num_blocks argument determines how many blocks are used to estimate the block_size. Higher is usually better if there is sufficient data.
+    if not block_sizes:
+        block_sizes = range(1 ,min(len(ciphertext)//2 + 1, 13) )
 
-    Raises an error if the ciphertext is not at least twice as long as the maximum of block_sizes. 
-    """
+    if min(block_sizes) < 1:
+        raise ValueError("block_sizes can only contain positive integers.")
+    if max(block_sizes) > len(ciphertext)//2:
+        raise ValueError(f"Maximum block size is {len(ciphertext)//2}. Got {max(block_sizes)}.")
 
-    if len(ciphertext) < 2*max(block_sizes)*num_blocks:
-        raise ValueError(
-            f"Not enough ciphertext to get {num_blocks} chunks of length {max(block_sizes)}. Try with more ciphertext, a smaller number of chunks or with smaller key lengths.")
-    
+
     # First we determine the most probable block_size
     block_size = 0
 
     best_block_score = 8 # the maximum hamming distance between two bytes.
     for L in block_sizes:
+        num_blocks = len(ciphertext) // (2*L)
         # Get N chunks of length 2*L
         blocks = [ciphertext[2*L*n:2*L*(n+1)] for n in range(num_blocks)]
         # Compute the average normalised edit distance (chunk score)
