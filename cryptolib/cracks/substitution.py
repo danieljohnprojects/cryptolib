@@ -5,12 +5,14 @@ Functions for breaking ciphers related to substitution ciphers.
 from typing import Optional
 from ..cracks.two_time_pad import decrypt_two_time_pad
 from ..utils.byteops import block_xor, hamming_distance
+from ..utils.plain_scoring import Scorer
 from collections.abc import Collection
 
 
 def decrypt_repeating_key_xor(
         ciphertext: bytes,
-        block_sizes: Optional[Collection[int]]=None
+        block_sizes: Optional[Collection[int]]=None,
+        scorer: Optional[Scorer]=None
         ) -> bytes:
     """
     Attempts to decrypt a string of bytes assuming a repeating key xor cipher.
@@ -19,7 +21,7 @@ def decrypt_repeating_key_xor(
     """    
 
     if not block_sizes:
-        block_sizes = range(1 ,min(len(ciphertext)//2 + 1, 13) )
+        block_sizes = range( 1, min(len(ciphertext)//2 + 1, 13) )
 
     if min(block_sizes) < 1:
         raise ValueError("block_sizes can only contain positive integers.")
@@ -34,7 +36,8 @@ def decrypt_repeating_key_xor(
     for L in block_sizes:
         num_blocks = len(ciphertext) // (2*L)
         # Get N chunks of length 2*L
-        blocks = [ciphertext[2*L*n:2*L*(n+1)] for n in range(num_blocks)]
+        c = ciphertext[:num_blocks*2*L]
+        blocks = [c[2*L*n:2*L*(n+1)] for n in range(num_blocks)]
         # Compute the average normalised edit distance (chunk score)
         block_scorer = lambda chunk: hamming_distance(chunk[:L], chunk[L:])
         ave_block_score = sum(map(block_scorer, blocks)) / (num_blocks*L)
@@ -50,8 +53,8 @@ def decrypt_repeating_key_xor(
         ciphertext[n*block_size: (n+1)*block_size] 
         for n in range(len(ciphertext) // block_size)
     ]
-    remainder = ciphertext[-(len(ciphertext)%block_size):]
-    plaintexts, key = decrypt_two_time_pad(cipher_blocks)
+    remainder = ciphertext[-(len(ciphertext)%block_size):] if len(ciphertext)%block_size else b''
+    plaintexts, key = decrypt_two_time_pad(cipher_blocks, scorer)
     plaintext = b''.join(plaintexts)
     plaintext += block_xor(remainder, key[:len(remainder)])
 
