@@ -4,21 +4,25 @@ Functions for breaking two time pads and related problems.
 
 from typing import Optional, Tuple
 from ..utils.byteops import cyclical_xor, block_xor
-from ..utils.plain_scoring import score
+
+from ..utils.plain_scoring import Scorer, ScrabbleScorer
 
 def decrypt_single_byte_xor(
         ciphertext: bytes, 
-        scorer: Optional[dict] = None) -> bytes:
+        scorer: Optional[Scorer] = None) -> bytes:
     """
     Finds the best decryption of the ciphertext assuming a single byte has been xored all the text
     """
+    if not scorer:
+        scorer = ScrabbleScorer()
+
     best_plaintext = ciphertext
-    best_score = score(ciphertext, scorer=scorer)
+    best_score = scorer.score(ciphertext)
     best_key = bytes(1)
     for int_key in range(1, 256):
         key = bytes([int_key])
         plaintext = cyclical_xor(key, ciphertext)
-        this_score = score(plaintext, scorer=scorer)
+        this_score = scorer.score(plaintext)
         if this_score < best_score:
             best_plaintext = plaintext
             best_score = this_score
@@ -28,7 +32,8 @@ def decrypt_single_byte_xor(
 
 def decrypt_two_time_pad(
         messages: list[bytes], 
-        scorer: Optional[dict] = None) -> Tuple[list[bytes], bytes]:
+        scorer: Optional[Scorer] = None
+        ) -> Tuple[list[bytes], bytes]:
     """
     Takes in a list of messages that have all been xored against the same key stream and determines the most likely decryptions according to the plaintext scorer provided.
 
@@ -36,6 +41,10 @@ def decrypt_two_time_pad(
 
     The decryptions are more likely to be good given more samples. If some messages are longer than others the ends of the long messages will not decrypt as well as the beginnings.
     """
+
+    if not scorer:
+        scorer = ScrabbleScorer()
+
     remaining_messages = messages.copy()
     N = max([len(m) for m in remaining_messages])
     keystream = b''

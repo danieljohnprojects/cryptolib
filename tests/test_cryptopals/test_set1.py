@@ -5,7 +5,7 @@ from cryptolib.cracks.substitution import decrypt_repeating_key_xor
 
 from cryptolib.utils.byteops import cyclical_xor, bytes_to_blocks
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
-from cryptolib.utils.plain_scoring import score
+from cryptolib.utils.plain_scoring import ScrabbleScorer
 
 from cryptolib.pipes import ECBDecrypt
 
@@ -64,11 +64,12 @@ def test_Challenge04():
     ctexts = map(bytes.fromhex, challenge04.ciphertexts)
     solution = bytes(b'Now that the party is jumping\n')
 
+    scorer = ScrabbleScorer()
     plain = bytes(b'')
     best_score = 1e10
     for cipher in ctexts:
         this_plain, _ = decrypt_single_byte_xor(cipher)
-        if (this_score := score(this_plain)) < best_score:
+        if (this_score := scorer.score(this_plain)) < best_score:
             plain = this_plain
             best_score = this_score
     
