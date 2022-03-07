@@ -1,15 +1,23 @@
+from pydoc import plain
 import pytest
 
 import base64
 import time
 import random
+import secrets
+
+from functools import reduce
+from string import ascii_letters
 
 from cryptolib.cracks.bc_oracles import decrypt_with_padding_oracle
+from cryptolib.cracks.exhaust import exhaust
 from cryptolib.cracks.rngs import exhaust_seed
 from cryptolib.cracks.two_time_pad import decrypt_two_time_pad
-from cryptolib.pipes import CTR
+from cryptolib.oracles import SequentialOracle
+from cryptolib.pipes import CTR, PRNGStreamCipher
 from cryptolib.rngs import MT19937
 from cryptolib.utils.padding import strip_pkcs7
+from tests.test_cracks.test_rngs import test_replicate_MT19937_state
 from .data import challenge17, challenge19, challenge20
 
 
@@ -201,3 +209,36 @@ def test_Challenge23():
 
     The new "spliced" generator should predict the values of the original. 
     """
+    test_replicate_MT19937_state()
+
+def test_Challenge24():
+    """
+     You can create a trivial stream cipher out of any PRNG; use it to generate a sequence of 8 bit outputs and call those outputs a keystream. XOR each byte of plaintext with each successive byte of keystream.
+
+    Write the function that does this for MT19937 using a 16-bit seed. Verify that you can encrypt and decrypt properly. This code should look similar to your CTR code.
+
+    Use your function to encrypt a known plaintext (say, 14 consecutive 'A' characters) prefixed by a random number of random characters.
+
+    From the ciphertext, recover the "key" (the 16 bit seed).
+
+    Use the same idea to generate a random "password reset token" using MT19937 seeded from the current time.
+
+    Write a function to check if any given password token is actually the product of an MT19937 PRNG seeded with the current time.
+    """
+    plaintext = [secrets.choice(ascii_letters) for _ in range(secrets.randbelow(10))]
+    known_plain_len = 14
+    plaintext = reduce(str.__add__, plaintext) + known_plain_len*'a'
+    plaintext = bytes(plaintext, 'ascii')
+
+    seed_len = 16
+    seed = secrets.randbelow(2**seed_len)
+
+    ciphertext = PRNGStreamCipher('mt19937', seed)(plaintext)
+
+    n = len(ciphertext) - known_plain_len
+    pipeline = SequentialOracle([
+        lambda seed: PRNGStreamCipher('mt19937', int.from_bytes(seed, 'big'))(b'\x00'*n + b'a'*known_plain_len),
+        lambda x: x[-known_plain_len:]
+    ])
+    found_seed = exhaust(ciphertext[-known_plain_len:], pipeline, seed_len)
+    assert int.from_bytes(found_seed, 'big') == seed
