@@ -104,6 +104,7 @@ scoring_systems = {
         '!': 1, # Same as 'i' and 'l'
         '&': 3, # Pops up sometimes
         '~': 8, # Pops up sometimes
+        '_': 1, # Same as ' ' in scrabble scoring
     }
 }
 
@@ -133,7 +134,7 @@ class ScrabbleScorer(Scorer):
 
 class LeetScorer(Scorer):
     def __init__(self):
-        super().__init__(scoring_systems['1337'], special_score=5)
+        super().__init__(scoring_systems['1337'], special_score=10)
 
 class CTFFlagScorer(LeetScorer):
     CTF_pattern = re.compile(r"^[a-zA-Z]{3,20}\{[^\s\}]{1,50}\}$")
