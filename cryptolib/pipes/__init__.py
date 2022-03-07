@@ -4,5 +4,6 @@ from .ECBEncrypt import ECBEncrypt
 from .CBCDecrypt import CBCDecrypt
 from .CBCEncrypt import CBCEncrypt
 from .CTR import CTR
+from .PRNGStreamCipher import PRNGStreamCipher
 from .AddIV import AddIV
 from .RandomBytes import RandomBytes
