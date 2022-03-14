@@ -1,6 +1,7 @@
 import pytest
 import random
 
+from cryptolib.rngs import MT19937
 from  cryptolib.pipes import RandomBytes
 
 def test_RandomBytes():
@@ -27,9 +28,9 @@ def test_RandomBytes():
         seed = rng.randbytes(4)
 
         # First test just the length with no offset
-        pipe = RandomBytes("mt19937", 20, 0)
+        pipe = RandomBytes(MT19937, 20, 0)
         out = pipe(seed)
         for length, offset in los:
-            pipe = RandomBytes("mt19937", length, offset)
+            pipe = RandomBytes(MT19937, length, offset)
             test = pipe(seed)
             assert test == out[offset:offset+length], f"test of length: {length}, offset: {offset}"
