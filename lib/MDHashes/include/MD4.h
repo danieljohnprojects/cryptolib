@@ -3,9 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Length of the digest in bytes
-#define DIGEST_LENGTH 16
-
 /**
  * @brief Computes the MD4 digest of a message and stores it in the given 
  * buffer. 
@@ -16,5 +13,5 @@
  */
 void MD4digest(const uint8_t *message, 
                size_t message_lenth, 
-               uint8_t digest[DIGEST_LENGTH]);
+               uint8_t digest[16]);
 

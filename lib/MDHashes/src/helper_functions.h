@@ -1,10 +1,20 @@
 #pragma once
 
-#include <MD4.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "constants.h"
+#include "constants_global.h"
+#ifdef MD2
+    #include "constants_MD2.h"
+#endif
+#ifdef MD4
+    #include "constants_MD4.h"
+#endif
+#ifdef MD5
+    #include "constants_MD5.h"
+#endif
+
+void print_digest(const uint8_t digest[DIGEST_LENGTH]);
 
 size_t determine_padded_length(size_t message_length);
 
@@ -14,8 +24,3 @@ void preprocess(const uint8_t *message,
                 size_t buffer_length);
 
 void init_digest(uint8_t digest[DIGEST_LENGTH]);
-
-void process_block(const uint32_t message_block[WORDS_PER_BLOCK], 
-                   uint8_t digest[DIGEST_LENGTH]);
-
-void print_digest(const uint8_t digest[DIGEST_LENGTH]);

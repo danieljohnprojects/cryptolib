@@ -6,7 +6,8 @@
 
 #include <MD4.h>
 
-#include "constants.h"
+#include "constants_global.h"
+#include "constants_MD4.h"
 #include "helper_functions.h"
 
 void test_determine_padded_length()
