@@ -16,7 +16,7 @@
 #include <IO.h>
 
 #include "MD4.h"
-#include "setup.h"
+#include "../setup.h"
 
 
 /**

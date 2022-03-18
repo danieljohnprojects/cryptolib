@@ -1,7 +1,7 @@
 add_library(
     MD4 SHARED
-    src/MD4.c
-    src/md4_setup.c
+    src/md4/MD4.c
+    src/md4/md4_setup.c
 )
 target_include_directories(MD4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(MD4 PRIVATE IO) # Automatically includes the header files, how good is that?! 
@@ -19,7 +19,7 @@ target_compile_options(MD4 PRIVATE "-g" "-Wall" "-Wextra")
 
 add_executable(
     md4_test
-    src/MD4_test.c
+    src/md4/MD4_test.c
 )
 target_link_libraries(md4_test PRIVATE MD4 IO)
 target_compile_options(md4_test PRIVATE "-g" "-Wall" "-Wextra")

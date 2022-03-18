@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "setup.h"
+#include "../setup.h"
 #include "MD4.h"
 
 
