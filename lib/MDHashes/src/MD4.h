@@ -1,8 +1,10 @@
 #pragma once
 
+#define MD4
+
 #define DIGEST_LENGTH 16
 
-#include <stdint.h>
+#include "constants_global.h"
 
 // Functions and constants for Round 1:
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))

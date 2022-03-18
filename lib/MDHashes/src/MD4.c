@@ -12,11 +12,11 @@
  */
 
 #include <stdio.h>
-#include <MD4.h>
+#include <Hash.h>
+#include <IO.h>
 
-#include "constants_global.h"
-#include "constants_MD4.h"
-#include "helper_functions.h"
+#include "MD4.h"
+#include "setup.h"
 
 
 /**
@@ -26,29 +26,27 @@
  * @param digest The digest of the hash
  */
 void process_block(const uint32_t message_block[WORDS_PER_BLOCK], 
-                   uint8_t digest[DIGEST_LENGTH])
+                   uint8_t digest_buffer[DIGEST_LENGTH])
 {
-    // printf("Contents of message block:\n");
-    // for (size_t i = 0; i < 16*4; i++)
-    // {
-    //     if (i > 0 && i%4==0)
-    //         printf(" ");
-    //     printf("%02x", ((uint8_t *)message_block)[i] );
-    // }
-    // printf("\n");
+    #ifdef VERBOSE
+        printf("Contents of message block:\n");
+        print_bytes((uint8_t *)message_block, WORDS_PER_BLOCK*4);
+    #endif
 
-
-    uint32_t *A = ((uint32_t *)digest) +  0;
-    uint32_t *B = ((uint32_t *)digest) +  1;
-    uint32_t *C = ((uint32_t *)digest) +  2;
-    uint32_t *D = ((uint32_t *)digest) +  3;
+    uint32_t *A = ((uint32_t *)digest_buffer) +  0;
+    uint32_t *B = ((uint32_t *)digest_buffer) +  1;
+    uint32_t *C = ((uint32_t *)digest_buffer) +  2;
+    uint32_t *D = ((uint32_t *)digest_buffer) +  3;
 
     uint32_t a = *A;
     uint32_t b = *B;
     uint32_t c = *C;
     uint32_t d = *D;
-    // printf("Initial digest state:\n");
-    // print_digest(digest);
+
+    #ifdef VERBOSE
+        printf("Initial digest state:\n");
+        print_bytes(digest_buffer, DIGEST_LENGTH);
+    #endif
 
     // Round 1
     FF(a, b, c, d, message_block[ 0], S11);
@@ -106,8 +104,11 @@ void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
     *B += b;
     *C += c;
     *D += d;
-    // printf("Final digest state:\n");    
-    // print_digest(digest);
+
+    #ifdef VERBOSE
+        printf("Final digest state:\n");   
+        print_bytes(digest_buffer, DIGEST_LENGTH);
+    #endif
 }
 
 
@@ -119,37 +120,49 @@ void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
  * @param message_length The length in bytes of the message.
  * @param digest A buffer that will store the resulting digest.
  */
-void MD4digest(const uint8_t *message, 
+void digest(const uint8_t *message, 
                size_t message_length, 
-               uint8_t digest[DIGEST_LENGTH])
+               uint8_t digest_buffer[DIGEST_LENGTH])
 {
-    // printf("Recieved message of length %ld bytes.\n", message_length);
+    #ifdef VERBOSE
+        printf("Recieved message of length %ld bytes.\n", message_length);
+    #endif
     size_t buffer_length = determine_padded_length(message_length);
-    // printf("Creating buffer of length %ld bytes to hold processed message.\n", buffer_length*4);
+
+    #ifdef VERBOSE
+        printf("Creating buffer of length %ld bytes to hold processed message.\n", buffer_length*4);
+    #endif
     uint32_t processed_message[buffer_length];
 
     preprocess(message, message_length, processed_message, buffer_length);
-    // printf("Original message:\n");
-    // for (size_t i = 0; i < message_length; i++)
-    //     printf("%02x", message[i]);
-    // printf("\n");
-    // printf("Processed message:\n");
-    // for (size_t i = 0; i < buffer_length*4; i++)
-    // {
-    //     if (i > 0 && i%4==0)
-    //         printf(" ");
-    //     printf("%02x", ((uint8_t *) processed_message)[i] );
-    // }
-    // printf("\n");
+    #ifdef VERBOSE
+        printf("Original message:\n");
+        print_bytes(message, message_length);
+        // for (size_t i = 0; i < message_length; i++)
+        //     printf("%02x", message[i]);
+        // printf("\n");
+        printf("Processed message:\n");
+        print_bytes((uint8_t *) processed_message, buffer_length*4);
+        // for (size_t i = 0; i < buffer_length*4; i++)
+        // {
+        //     if (i > 0 && i%4==0)
+        //         printf(" ");
+        //     printf("%02x", ((uint8_t *) processed_message)[i] );
+        // }
+        // printf("\n");
+    #endif
 
+    #ifdef VERBOSE
+        printf("Initialising digest...\n");
+    #endif
+    init_digest(digest_buffer);
 
     size_t num_blocks = buffer_length / WORDS_PER_BLOCK;
-
-    init_digest(digest);
-
     for (size_t i = 0; i < num_blocks; i++)
     {
-        // printf("Incorporating block %ld of %ld into digest\n", i, num_blocks);
-        process_block(processed_message + WORDS_PER_BLOCK*i, digest);
+        #ifdef VERBOSE
+            printf("Incorporating block %ld of %ld into digest\n", i, num_blocks);
+        #endif
+        process_block(processed_message + WORDS_PER_BLOCK*i, digest_buffer);
     }
 }
