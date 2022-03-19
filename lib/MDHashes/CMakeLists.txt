@@ -46,5 +46,5 @@ add_executable(
     md2_test
     src/md2/MD2_test.c
 )
-target_link_libraries(md2_test PRIVATE MD5 IO)
+target_link_libraries(md2_test PRIVATE MD2 IO)
 target_compile_options(md2_test PRIVATE "-g" "-Wall" "-Wextra")
