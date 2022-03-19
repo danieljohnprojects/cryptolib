@@ -44,3 +44,8 @@
 #define S32 9
 #define S33 11
 #define S34 15
+
+void preprocess(const uint8_t *message, 
+                size_t message_length,
+                uint32_t *buffer,
+                size_t buffer_length);
