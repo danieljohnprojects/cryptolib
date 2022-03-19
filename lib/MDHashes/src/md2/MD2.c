@@ -16,8 +16,86 @@
 #include <Hash.h>
 #include <IO.h>
 
-#include "MD2.h"
-#include "../setup.h"
+#include "constants.h"
+#include "../md.h"
+
+// Permutation of 0..255 constructed from the digits of pi.
+static uint8_t PI_SUBST[256] = {
+  41, 46, 67, 201, 162, 216, 124, 1, 61, 54, 84, 161, 236, 240, 6,
+  19, 98, 167, 5, 243, 192, 199, 115, 140, 152, 147, 43, 217, 188,
+  76, 130, 202, 30, 155, 87, 60, 253, 212, 224, 22, 103, 66, 111, 24,
+  138, 23, 229, 18, 190, 78, 196, 214, 218, 158, 222, 73, 160, 251,
+  245, 142, 187, 47, 238, 122, 169, 104, 121, 145, 21, 178, 7, 63,
+  148, 194, 16, 137, 11, 34, 95, 33, 128, 127, 93, 154, 90, 144, 50,
+  39, 53, 62, 204, 231, 191, 247, 151, 3, 255, 25, 48, 179, 72, 165,
+  181, 209, 215, 94, 146, 42, 172, 86, 170, 198, 79, 184, 56, 210,
+  150, 164, 125, 182, 118, 252, 107, 226, 156, 116, 4, 241, 69, 157,
+  112, 89, 100, 113, 135, 32, 134, 91, 207, 101, 230, 45, 168, 2, 27,
+  96, 37, 173, 174, 176, 185, 246, 28, 70, 97, 105, 52, 64, 126, 15,
+  85, 71, 163, 35, 221, 81, 175, 58, 195, 92, 249, 206, 186, 197,
+  234, 38, 44, 83, 13, 110, 133, 40, 132, 9, 211, 223, 205, 244, 65,
+  129, 77, 82, 106, 220, 55, 200, 108, 193, 171, 250, 36, 225, 123,
+  8, 12, 189, 177, 74, 120, 136, 149, 139, 227, 99, 232, 109, 233,
+  203, 213, 254, 59, 0, 29, 57, 242, 239, 183, 14, 102, 88, 208, 228,
+  166, 119, 114, 248, 235, 117, 75, 10, 49, 68, 80, 180, 143, 237,
+  31, 26, 219, 153, 141, 51, 159, 17, 131, 20
+};
+
+/**
+ * @brief Computes the number of bytes words needed to store a message of the 
+ * given length (in bytes), plus padding and checksum.
+ * 
+ * @param message_length The length of the unpadded message in bytes.
+ * @return The length of the corresponding buffer in bytes.
+ */
+static size_t determine_padded_length(size_t message_length)
+{
+    size_t padding_length = BLOCK_LENGTH - (message_length % BLOCK_LENGTH);
+    return message_length + padding_length + CHECKSUM_LENGTH;
+}
+
+/**
+ * Fills a buffer with the given message, appropriately padded and with 
+ * checksum appended.
+ * 
+ * @param message A pointer to an array of bytes constituting the message. Note 
+ * that this is not necesarilly a string so does not need a null terminator.
+ * @param message_length The length of the message in bytes.
+ * @param buffer A pointer to an array that will store the processed 
+ * message.
+ * @param buffer_length The length of the buffer in bytes.
+ */
+static void preprocess(const uint8_t *message, 
+                       size_t message_length,
+                       uint8_t *buffer,
+                       size_t buffer_length)
+{
+    // Initialise the checksum
+    uint8_t *checksum = buffer + buffer_length - CHECKSUM_LENGTH;
+    size_t i = 0;
+    for (; i < CHECKSUM_LENGTH; i++)
+        checksum[i] = 0;
+    
+    i = 0;
+    uint8_t j = 0;
+    uint8_t L = 0;
+
+    for (; i < message_length; i++, j=(j+1)%16)
+    {
+        buffer[i] = message[i];
+        checksum[j] = PI_SUBST[L ^ message[i]];
+        L = checksum[j];
+    }
+
+    uint8_t pad_byte = buffer_length - CHECKSUM_LENGTH - message_length;
+    for (; i < buffer_length - CHECKSUM_LENGTH; i++, j=(j+1)%16)
+    {
+        buffer[i] = pad_byte;
+        checksum[j] = PI_SUBST[L ^ pad_byte];
+        L = checksum[j];
+    }
+}
+
 
 /**
  * @brief Update the digest using the 16-word block from the message
@@ -25,8 +103,8 @@
  * @param message_block A block of 16 words from the message.
  * @param state_buffer A buffer to hold the internal state.
  */
-void process_block(const uint8_t message_block[BLOCK_LENGTH], 
-                   uint8_t state_buffer[STATE_BUFFER_LENGTH])
+static void process_block(const uint8_t message_block[BLOCK_LENGTH], 
+                          uint8_t state_buffer[STATE_BUFFER_LENGTH])
 {
     #ifdef VERBOSE
         printf("Contents of message block:\n");

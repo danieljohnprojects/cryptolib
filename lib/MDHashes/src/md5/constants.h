@@ -1,9 +1,5 @@
 #pragma once
 
-#define MD5
-
-#define DIGEST_LENGTH 16
-
 // Padding is added to a message so that its length in bytes is congruent to 
 // PAD_REMAINDER modulo PAD_BLOCK.
 #define PAD_BLOCK 64
@@ -59,8 +55,3 @@
 #define S42 10
 #define S43 15
 #define S44 21
-
-void preprocess(const uint8_t *message, 
-                size_t message_length,
-                uint32_t *buffer,
-                size_t buffer_length);

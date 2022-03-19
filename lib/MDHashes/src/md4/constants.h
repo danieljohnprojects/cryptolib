@@ -1,9 +1,5 @@
 #pragma once
 
-#define MD4
-
-#define DIGEST_LENGTH 16
-
 // Padding is added to a message so that its length in bytes is congruent to 
 // PAD_REMAINDER modulo PAD_BLOCK.
 #define PAD_BLOCK 64
@@ -44,8 +40,3 @@
 #define S32 9
 #define S33 11
 #define S34 15
-
-void preprocess(const uint8_t *message, 
-                size_t message_length,
-                uint32_t *buffer,
-                size_t buffer_length);
