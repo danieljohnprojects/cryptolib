@@ -81,7 +81,7 @@ void md2digest(const uint8_t *message,
     size_t buffer_length = determine_padded_length(message_length);
 
     #ifdef VERBOSE
-        printf("Creating buffer of length %ld bytes to hold processed message.\n", buffer_length*4);
+        printf("Creating buffer of length %ld bytes to hold processed message.\n", buffer_length);
     #endif
 
     uint8_t processed_message[buffer_length];
@@ -91,7 +91,7 @@ void md2digest(const uint8_t *message,
         printf("Original message:\n");
         print_bytes(message, message_length);
         printf("Processed message:\n");
-        print_bytes((uint8_t *) processed_message, buffer_length*4);
+        print_bytes((uint8_t *) processed_message, buffer_length);
     #endif
 
     size_t i;
