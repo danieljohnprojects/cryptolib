@@ -71,9 +71,9 @@ void process_block(const uint8_t message_block[BLOCK_LENGTH],
  * @param message_length The length in bytes of the message.
  * @param digest A buffer that will store the resulting digest.
  */
-void digest(const uint8_t *message,
-            size_t message_length,
-            uint8_t digest_buffer[DIGEST_LENGTH])
+void md2digest(const uint8_t *message,
+               size_t message_length,
+               uint8_t digest_buffer[DIGEST_LENGTH])
 {
     #ifdef VERBOSE
         printf("Recieved message of length %ld bytes.\n", message_length);

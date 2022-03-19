@@ -118,9 +118,9 @@ void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
  * 
  * @param message A string of bytes to digest.
  * @param message_length The length in bytes of the message.
- * @param digest A buffer that will store the resulting digest.
+ * @param digest_buffer A buffer that will store the resulting digest.
  */
-void digest(const uint8_t *message, 
+void md4digest(const uint8_t *message, 
                size_t message_length, 
                uint8_t digest_buffer[DIGEST_LENGTH])
 {

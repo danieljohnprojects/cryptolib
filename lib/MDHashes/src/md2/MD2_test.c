@@ -19,7 +19,7 @@ void test_MD2digest()
         digest_buffer[i] = 0x00;
 
     printf("Computing hash of empty string:\n");
-    digest(message, 0, digest_buffer);
+    md2digest(message, 0, digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0x83);
     assert (digest_buffer[1] == 0x50);
@@ -29,7 +29,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     message[0] = 'a';
-    digest(message, 1, digest_buffer);
+    md2digest(message, 1, digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0x32);
     assert (digest_buffer[1] == 0xec);
@@ -39,7 +39,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     strcpy((char *) message, "abc");
-    digest(message, strlen((char *) message), digest_buffer);
+    md2digest(message, strlen((char *) message), digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0xda);
     assert (digest_buffer[1] == 0x85);
@@ -49,7 +49,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     strcpy((char *) message, "message digest");
-    digest(message, strlen((char *) message), digest_buffer);
+    md2digest(message, strlen((char *) message), digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0xab);
     assert (digest_buffer[1] == 0x4f);
@@ -59,7 +59,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     strcpy((char *) message, "abcdefghijklmnopqrstuvwxyz");
-    digest(message, strlen((char *) message), digest_buffer);
+    md2digest(message, strlen((char *) message), digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0x4e);
     assert (digest_buffer[1] == 0x8d);
@@ -69,7 +69,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     strcpy((char *) message, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    digest(message, strlen((char *) message), digest_buffer);
+    md2digest(message, strlen((char *) message), digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0xda);
     assert (digest_buffer[1] == 0x33);
@@ -79,7 +79,7 @@ void test_MD2digest()
     for (size_t i = 0; i < DIGEST_LENGTH; i++)
         digest_buffer[i] = 0x00;
     strcpy((char *) message, "12345678901234567890123456789012345678901234567890123456789012345678901234567890");
-    digest(message, strlen((char *) message), digest_buffer);
+    md2digest(message, strlen((char *) message), digest_buffer);
     print_bytes(digest_buffer, DIGEST_LENGTH);
     assert (digest_buffer[0] == 0xd5);
     assert (digest_buffer[1] == 0x97);

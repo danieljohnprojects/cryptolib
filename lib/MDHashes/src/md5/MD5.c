@@ -131,11 +131,11 @@ void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
  * 
  * @param message A string of bytes to digest.
  * @param message_length The length in bytes of the message.
- * @param digest A buffer that will store the resulting digest.
+ * @param digest_buffer A buffer that will store the resulting digest.
  */
-void digest(const uint8_t *message, 
-            size_t message_length, 
-            uint8_t digest[DIGEST_LENGTH])
+void md5digest(const uint8_t *message, 
+               size_t message_length, 
+               uint8_t digest_buffer[DIGEST_LENGTH])
 {
     #ifdef VERBOSE
         printf("Recieved message of length %ld bytes.\n", message_length);
@@ -157,13 +157,13 @@ void digest(const uint8_t *message,
 
     size_t num_blocks = buffer_length / WORDS_PER_BLOCK;
 
-    init_digest(digest);
+    init_digest(digest_buffer);
 
     for (size_t i = 0; i < num_blocks; i++)
     {
         #ifdef VERBOSE
             printf("Incorporating block %ld of %ld into digest\n", i, num_blocks);
         #endif
-        process_block(processed_message + WORDS_PER_BLOCK*i, digest);
+        process_block(processed_message + WORDS_PER_BLOCK*i, digest_buffer);
     }
 }
