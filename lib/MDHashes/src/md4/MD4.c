@@ -213,18 +213,8 @@ void md4digest(const uint8_t *message,
     #ifdef VERBOSE
         printf("Original message:\n");
         print_bytes(message, message_length);
-        // for (size_t i = 0; i < message_length; i++)
-        //     printf("%02x", message[i]);
-        // printf("\n");
         printf("Processed message:\n");
         print_bytes((uint8_t *) processed_message, buffer_length*4);
-        // for (size_t i = 0; i < buffer_length*4; i++)
-        // {
-        //     if (i > 0 && i%4==0)
-        //         printf(" ");
-        //     printf("%02x", ((uint8_t *) processed_message)[i] );
-        // }
-        // printf("\n");
     #endif
 
     #ifdef VERBOSE
