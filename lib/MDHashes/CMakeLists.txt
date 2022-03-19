@@ -31,3 +31,20 @@ add_executable(
 )
 target_link_libraries(md5_test PRIVATE MD5 IO)
 target_compile_options(md5_test PRIVATE "-g" "-Wall" "-Wextra")
+    
+add_library(
+    MD2 SHARED
+    src/md2/MD2.c
+    src/md2/md2_setup.c
+)
+target_include_directories(MD2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(MD2 PRIVATE IO)
+target_compile_options(MD2 PRIVATE "-g" "-Wall" "-Wextra")
+target_compile_definitions(MD2 PUBLIC VERBOSE)
+
+add_executable(
+    md2_test
+    src/md2/MD2_test.c
+)
+target_link_libraries(md2_test PRIVATE MD5 IO)
+target_compile_options(md2_test PRIVATE "-g" "-Wall" "-Wextra")
