@@ -41,6 +41,7 @@ static uint8_t PI_SUBST[256] = {
   31, 26, 219, 153, 141, 51, 159, 17, 131, 20
 };
 
+
 /**
  * @brief Computes the number of bytes words needed to store a message of the 
  * given length (in bytes), plus padding and checksum.
@@ -53,6 +54,7 @@ static size_t determine_padded_length(size_t message_length)
     size_t padding_length = BLOCK_LENGTH - (message_length % BLOCK_LENGTH);
     return message_length + padding_length + CHECKSUM_LENGTH;
 }
+
 
 /**
  * Fills a buffer with the given message, appropriately padded and with 
@@ -77,22 +79,19 @@ static void preprocess(const uint8_t *message,
         checksum[i] = 0;
     
     i = 0;
-    uint8_t j = 0;
     uint8_t L = 0;
 
-    for (; i < message_length; i++, j=(j+1)%16)
+    for (; i < message_length; i++)
     {
         buffer[i] = message[i];
-        checksum[j] = PI_SUBST[L ^ message[i]];
-        L = checksum[j];
+        L = checksum[i % BLOCK_LENGTH] ^= PI_SUBST[L ^ message[i]];
     }
 
     uint8_t pad_byte = buffer_length - CHECKSUM_LENGTH - message_length;
-    for (; i < buffer_length - CHECKSUM_LENGTH; i++, j=(j+1)%16)
+    for (; i < buffer_length - CHECKSUM_LENGTH; i++)
     {
         buffer[i] = pad_byte;
-        checksum[j] = PI_SUBST[L ^ pad_byte];
-        L = checksum[j];
+        L = checksum[i % BLOCK_LENGTH] ^= PI_SUBST[L ^ pad_byte];
     }
 }
 
@@ -104,7 +103,7 @@ static void preprocess(const uint8_t *message,
  * @param state_buffer A buffer to hold the internal state.
  */
 static void process_block(const uint8_t message_block[BLOCK_LENGTH], 
-                          uint8_t state_buffer[STATE_BUFFER_LENGTH])
+                          uint8_t digest_buffer[DIGEST_LENGTH])
 {
     #ifdef VERBOSE
         printf("Contents of message block:\n");
@@ -113,14 +112,17 @@ static void process_block(const uint8_t message_block[BLOCK_LENGTH],
 
     #ifdef VERBOSE
         printf("Initial state:\n");
-        print_bytes(state_buffer, STATE_BUFFER_LENGTH);
+        print_bytes(digest_buffer, DIGEST_LENGTH);
     #endif
+
+    uint8_t state_buffer[STATE_BUFFER_LENGTH];
 
     size_t j;
     for (j = 0; j < BLOCK_LENGTH; j++)
     {
+        state_buffer[ 0 + j] = digest_buffer[j];
         state_buffer[16 + j] = message_block[j];
-        state_buffer[32 + j] = state_buffer[16 + j] ^ state_buffer[j];
+        state_buffer[32 + j] = digest_buffer[j] ^ message_block[j];
     }
 
     uint8_t t = 0;
@@ -129,7 +131,7 @@ static void process_block(const uint8_t message_block[BLOCK_LENGTH],
     {
         for (size_t k = 0; k < STATE_BUFFER_LENGTH; k++)
         {
-            state_buffer[k] = state_buffer[k] ^ PI_SUBST[t];
+            state_buffer[k] ^= PI_SUBST[t];
             t = state_buffer[k];
         }
         t = (t+j) % 256;
@@ -139,7 +141,11 @@ static void process_block(const uint8_t message_block[BLOCK_LENGTH],
         printf("Final state:\n");   
         print_bytes(state_buffer, STATE_BUFFER_LENGTH);
     #endif
+
+    for (j = 0; j < DIGEST_LENGTH; j++)
+        digest_buffer[j] = state_buffer[j];
 }
+
 
 /**
  * @brief Computes the MD2 digest of a message and stores it in the given 
@@ -173,9 +179,6 @@ void md2digest(const uint8_t *message,
     #endif
 
     size_t i;
-    uint8_t state[STATE_BUFFER_LENGTH];
-    for (i = 0; i < STATE_BUFFER_LENGTH; i++)
-        state[i] = 0;
     
     size_t num_blocks = buffer_length / BLOCK_LENGTH;
     for (i = 0; i < num_blocks; i++)
@@ -183,9 +186,6 @@ void md2digest(const uint8_t *message,
         #ifdef VERBOSE
             printf("Incorporating block %ld of %ld into digest\n", i, num_blocks);
         #endif
-        process_block(processed_message + i*BLOCK_LENGTH, state);
+        process_block(processed_message + i*BLOCK_LENGTH, digest_buffer);
     }
-
-    for (i = 0; i < DIGEST_LENGTH; i++)
-        digest_buffer[i] = state[i];
 }
