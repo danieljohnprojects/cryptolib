@@ -9,6 +9,7 @@
 
 #include "../src/md.h"
 
+
 /**
  * @brief Test that the hash of the given test string starts with the bytes 
  * out1 and out2.
@@ -26,6 +27,8 @@ void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *),
 {
     size_t message_length = strlen(test_string);
     uint8_t digest_buffer[DIGEST_LENGTH];
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        digest_buffer[i] = 0;
     
     #ifdef VERBOSE
         printf("Computing hash of \"%s\":\n", test_string);
@@ -34,7 +37,6 @@ void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *),
     hash((uint8_t *) test_string, message_length, digest_buffer);
     
     #ifdef VERBOSE
-        printf("Hash of \"%s\":\n", test_string);
         print_bytes(digest_buffer, DIGEST_LENGTH);
         printf("\n");
     #endif
@@ -42,6 +44,7 @@ void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *),
     assert (digest_buffer[0] == out0);
     assert (digest_buffer[1] == out1);
 }
+
 
 void test_MD2digest()
 {
@@ -57,7 +60,11 @@ void test_MD2digest()
     test_hash(md2digest, "abcdefghijklmnopqrstuvwxyz", 0x4e, 0x8d);
     test_hash(md2digest, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0xda, 0x33);
     test_hash(md2digest, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0xd5, 0x97);
+    #ifdef VERBOSE
+        printf("MD2 tests passed!!\n\n");
+    #endif
 }
+
 
 void test_MD4digest()
 {
@@ -73,7 +80,11 @@ void test_MD4digest()
     test_hash(md4digest, "abcdefghijklmnopqrstuvwxyz", 0xd7, 0x9e);
     test_hash(md4digest, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0x04, 0x3f);
     test_hash(md4digest, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0xe3, 0x3b);
+    #ifdef VERBOSE
+        printf("MD4 tests passed!!\n\n");
+    #endif
 }
+
 
 void test_MD5digest()
 {
@@ -89,13 +100,20 @@ void test_MD5digest()
     test_hash(md5digest, "abcdefghijklmnopqrstuvwxyz", 0xc3, 0xfc);
     test_hash(md5digest, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0xd1, 0x74);
     test_hash(md5digest, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0x57, 0xed);
+    #ifdef VERBOSE
+        printf("MD5 tests passed!!\n\n");
+    #endif
 }
+
 
 void test_md_hashes()
 {
+    test_MD2digest();
     test_MD4digest();
     test_MD5digest();
-    test_MD2digest();
+    #ifdef VERBOSE
+        printf("All tests passed!!\n\n");
+    #endif
 }
 
 int main()
