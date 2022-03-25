@@ -2,7 +2,7 @@ from ctypes import *
 from functools import reduce
 from typing import Sequence, Union
 from .RNG import RNGEngine
-from ..utils.files import build_filename
+from ...utils.files import build_filename
 
 class MT19937(RNGEngine):
     """
