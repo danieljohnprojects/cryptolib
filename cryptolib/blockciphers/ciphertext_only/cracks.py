@@ -6,8 +6,19 @@ These attacks assume the attacker has access only to the ciphertext output of a 
 There is very little we can do with just ciphertext here so this module is quite sparse.
 """
 
+from math import gcd
 from typing import Collection, Union
 from cryptolib.utils.byteops import bytes_to_blocks
+
+
+def get_max_block_size(ciphertexts: Collection[bytes]) -> int:
+    """
+    Given a collection of ciphertexts, each assumed to have been created from the same block cipher, determines the maximum possible block size.
+
+    This simply takes the gcd of the lengths of the messages.
+    """
+    return gcd(*[len(c) for c in ciphertexts])
+
 
 def evidence_of_ECB(cipher: Union[bytes, Collection[bytes]], 
                     block_size: int = 16) -> bool:
@@ -31,3 +42,4 @@ def evidence_of_ECB(cipher: Union[bytes, Collection[bytes]],
         blocks += bytes_to_blocks(c, block_size=block_size)
 
     return (len(blocks) != len(set(blocks)))
+
