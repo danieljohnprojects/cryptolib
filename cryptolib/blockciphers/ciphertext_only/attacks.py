@@ -16,11 +16,16 @@ def get_max_block_size(ciphertexts: Collection[bytes]) -> int:
     Given a collection of ciphertexts, each assumed to have been created from the same block cipher, determines the maximum possible block size.
 
     This simply takes the gcd of the lengths of the messages.
+
+    Args:
+        ciphertexts: A collection of ciphertexts coming from the same block cipher.
+    Returns:
+        The maximum possible block size of the algorithm used to create the ciphertexts.
     """
     return gcd(*[len(c) for c in ciphertexts])
 
 
-def evidence_of_ECB(cipher: Union[bytes, Collection[bytes]], 
+def evidence_of_ECB(ciphertext: Union[bytes, Collection[bytes]], 
                     block_size: int = 16) -> bool:
     """
     Searches for evidence that the provided ciphertext(s) was(/were) encrypted under Electronic CodeBook (ECB) mode using the same key.
@@ -30,15 +35,14 @@ def evidence_of_ECB(cipher: Union[bytes, Collection[bytes]],
     Args:
         cipher: A string of bytes or collection of strings of bytes to test.
         block_size: The suspected block size of the underlying block cipher.
-    
     Returns:
         True if evidence is found, False otherwise.
     """
-    if not isinstance(cipher, Collection):
-        cipher = [cipher]
+    if not isinstance(ciphertext, Collection):
+        ciphertext = [ciphertext]
 
     blocks = []
-    for c in cipher:
+    for c in ciphertext:
         blocks += bytes_to_blocks(c, block_size=block_size)
 
     return (len(blocks) != len(set(blocks)))
