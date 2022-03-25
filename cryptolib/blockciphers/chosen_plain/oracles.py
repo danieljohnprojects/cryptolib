@@ -19,8 +19,7 @@ class EncryptECB:
 
     def __init__(self,
                  algorithm: str,
-                 key: Optional[bytes] = None
-        ):
+                 key: Optional[bytes] = None):
 
         engine_generating_function, key_size = engine_generators[algorithm.lower()]
         if not key:
