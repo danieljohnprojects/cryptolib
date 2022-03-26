@@ -2,22 +2,9 @@ import pytest
 import random
 import secrets
 
-from cryptolib.cracks.bc_oracles import (
-    uses_ECB,
-    get_block_size,
-    get_additional_message_len,
-    decode_suffix
-)
-from cryptolib.oracles import (
-    SequentialOracle,
-    AdditionalPlaintextOracle
-)
-from cryptolib.pipes import (
-    CBCDecrypt,
-    CBCEncrypt,
-    ECBEncrypt,
-    AddIV
-)
+from cryptolib.blockciphers.chosen_cipher.oracles import DecryptCBC
+from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC, EncryptCBC_fixed_iv, EncryptECB
+from cryptolib.blockciphers.chosen_plain.attacks import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
 from cryptolib.utils.byteops import bytes_to_blocks, block_xor
 from cryptolib.utils.padding import PaddingError, pkcs7, strip_pkcs7
 
@@ -61,12 +48,10 @@ def test_Challenge10():
     solution = challenge10.solution
     key = b'YELLOW SUBMARINE'
 
-    oracle = SequentialOracle([
-        CBCDecrypt('aes', key),
-        lambda message: strip_pkcs7(message, 16)
-    ])
+    oracle = DecryptCBC('aes', key)
+    iv = bytes(16)
 
-    assert oracle(bytes(16) + ciphertext) == solution
+    assert oracle(iv + ciphertext) == solution
 
 
 def test_Challenge11():
@@ -90,19 +75,15 @@ def test_Challenge11():
     """
 
     for _ in range(10):
-        choice = random.choice(['ECB', 'CBC'])
-        if choice == 'ECB':
-            oracle = SequentialOracle([
-                lambda message: pkcs7(message, 16),
-                ECBEncrypt('aes', secrets.token_bytes(16)),
-            ])
+        choice = random.choice(['ecb', 'cbc'])
+        if choice == 'ecb':
+            oracle = EncryptECB('aes')
         else:
-            oracle = SequentialOracle([
-                lambda message: pkcs7(message, 16),
-                AddIV(),
-                CBCEncrypt('aes', secrets.token_bytes(16))
-            ])
-        mode = 'ECB' if uses_ECB(oracle) else 'CBC'
+            oracle = EncryptCBC('aes')
+        try:
+            mode = diagnose_mode(oracle, 16)
+        except RuntimeError:
+            mode = 'cbc' # throws an error if encryption is randomised.
         assert choice == mode
 
 
@@ -138,13 +119,19 @@ def test_Challenge12():
         Match the output of the one-byte-short input to one of the entries in your dictionary. You've now discovered the first byte of unknown-string.
         Repeat for the next byte.
     """
-    solution = challenge12.secret_suffix
-    oracle = AdditionalPlaintextOracle(secret_suffix=solution)
+    class secret_suffix_oracle_ecb:
+        def __init__(self):
+            self.suffix = challenge12.secret_suffix
+            self.engine = EncryptECB('aes')
+        def __call__(self, message: bytes) -> bytes:
+            return self.engine(message + self.suffix)
+
+    oracle = secret_suffix_oracle_ecb()
     B = get_block_size(oracle)
-    assert(uses_ECB(oracle, block_size=B))
+    assert(diagnose_mode(oracle, block_size=B) == 'ecb')
     _, suffix_len = get_additional_message_len(oracle, B)
-    suffix = decode_suffix(oracle, suffix_len, block_size=B)
-    assert suffix == solution
+    suffix = decrypt_suffix(oracle, suffix_len, block_size=B)
+    assert suffix == challenge12.secret_suffix
 
 
 def test_Challenge13():
@@ -188,10 +175,11 @@ def test_Challenge13():
 
     server, client = challenge13.create_server_client()
     B = get_block_size(client, allowable_bytes=allowable_bytes)
-    assert uses_ECB(client, B, allowable_bytes=allowable_bytes)
+    assert diagnose_mode(client, B, allowable_bytes=allowable_bytes) == 'ecb'
+
     prefix_len, suffix_len = get_additional_message_len(
         client, B, allowable_bytes=allowable_bytes)
-    # Can't actually decode suffix since it contains characters that we cannot send through the oracle.
+    # Can't actually decrypt suffix since it contains characters that we cannot send through the oracle.
 
     # Need to figure out what a block consisting of the string "admin" looks like encrypted.
     desired_role = pkcs7(b'admin', B)
@@ -222,16 +210,20 @@ def test_Challenge14():
 
     Same goal: decrypt the target-bytes. 
     """
-    solution = secrets.token_bytes(secrets.choice(range(6, 20)))
-    oracle = AdditionalPlaintextOracle(
-        secret_prefix=secrets.token_bytes(secrets.choice(range(6, 20))),
-        secret_suffix=solution
-    )
+    class random_prefix_oracle:
+        def __init__(self, engine_constructor):
+            self.engine = engine_constructor('aes', secrets.token_bytes(16))
+            self.prefix = secrets.token_bytes(secrets.choice(range(6,20)))
+            self.suffix = secrets.token_bytes(secrets.choice(range(6,20)))
+        def __call__(self, message: bytes) -> bytes:
+            return self.engine(self.prefix + message + self.suffix)
+
+    oracle = random_prefix_oracle(EncryptCBC_fixed_iv)
 
     B = get_block_size(oracle)
-    assert(uses_ECB(oracle, block_size=B))
     prefix_len, suffix_len = get_additional_message_len(oracle, B)
-    assert decode_suffix(oracle, suffix_len, prefix_len, B) == solution
+    assert(diagnose_mode(oracle, block_size=B, prefix_length=prefix_len) == "cbc")
+    assert decrypt_suffix(oracle, suffix_len, prefix_len, B) == oracle.suffix
 
 
 def test_Challenge15():
@@ -264,18 +256,10 @@ def test_Challenge15():
     ]
 
     assert strip_pkcs7(test_values[0], 16) == b"ICE ICE BABY"
-    try:
+    with pytest.raises(PaddingError):
         strip_pkcs7(test_values[1], 16)
-    except PaddingError:
-        assert True
-    else:
-        assert False
-    try:
+    with pytest.raises(PaddingError):
         strip_pkcs7(test_values[2], 16)
-    except PaddingError:
-        assert True
-    else:
-        assert False
 
 
 def test_Challenge16():
@@ -329,7 +313,6 @@ def test_Challenge16():
     usr_input = fill * (N + B) + send_message
 
     enc_input = client(usr_input)
-    server.iv = client.iv
 
     mask = block_xor(target_message, send_message)
     # Pad the mask to size B with 0s

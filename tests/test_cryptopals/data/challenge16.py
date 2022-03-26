@@ -1,7 +1,5 @@
-from typing import Tuple
-from cryptolib.pipes import CBCDecrypt
-from cryptolib.oracles import SequentialOracle, AdditionalPlaintextWithQuotingOracle
-from cryptolib.utils.padding import strip_pkcs7
+from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC_fixed_iv
+from cryptolib.blockciphers.chosen_cipher.oracles import DecryptCBC
 
 import re
 import secrets
@@ -24,21 +22,26 @@ def parse_dict(message: bytes):
     return profile.get(b'admin', b'')
 
 
-def create_server_client() -> Tuple[SequentialOracle, SequentialOracle]:
+def create_server_client():
     key = secrets.token_bytes(32)
-    client = AdditionalPlaintextWithQuotingOracle(
-        secret_prefix=rb"comment1=cooking%20MCs;userdata=",
-        secret_suffix=rb";comment2=%20like%20a%20pound%20of%20bacon",
-        quote_chars=b";=",
-        mode='cbc',
-        key=key,
-        fix_iv=True
-    )
-    server = SequentialOracle([
-        CBCDecrypt('aes', key),
-        lambda message: strip_pkcs7(message, 16),
-        parse_dict,
-    ])
-    client.iv = secrets.token_bytes(16)
-    server.iv = client.iv
-    return server, client
+    class client:
+        def __init__(self):
+            self.prefix = b'comment1=cooking%20MCs;userdata='
+            self.suffix = b';comment2=%20like%20a%20pound%20of%20bacon'
+            self.quote_chars = b'=;'
+            self.engine = EncryptCBC_fixed_iv('aes', key)
+        
+        def __call__(self, message: bytes) -> bytes:
+            for c in self.quote_chars:
+                b = bytes([c])
+                message = message.replace(b, b'"' + b + b'"')
+            return self.engine(self.prefix + message + self.suffix)
+
+    class server:
+        def __init__(self):
+            self.engine = DecryptCBC('aes', key)
+        def __call__(self, ciphertext: bytes) -> bytes:
+            message = self.engine(ciphertext)
+            return parse_dict(message)
+    
+    return server(), client()

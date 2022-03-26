@@ -1,7 +1,5 @@
-from typing import Tuple
-from cryptolib.pipes import ECBDecrypt
-from cryptolib.oracles import SequentialOracle, AdditionalPlaintextWithQuotingOracle
-from cryptolib.utils.padding import strip_pkcs7
+from cryptolib.blockciphers.chosen_plain.oracles import EncryptECB
+from cryptolib.blockciphers.chosen_cipher.oracles import DecryptECB
 
 import re
 import secrets
@@ -24,19 +22,26 @@ def parse_dict(message: bytes) -> bytes:
     return profile.get(b'role', b'')
 
 
-def create_server_client() -> Tuple[SequentialOracle, SequentialOracle]:
+def create_server_client():
     key = secrets.token_bytes(32)
-    client = AdditionalPlaintextWithQuotingOracle(
-        secret_prefix=b'email=',
-        secret_suffix=b'&UID=10&role=user',
-        quote_chars=b'=&',
-        mode="ecb",
-        algorithm="aes",
-        key=key)
-    server = SequentialOracle([
-        ECBDecrypt('aes', key),
-        lambda message: strip_pkcs7(message, 16),
-        parse_dict,
-    ])
+    class client:
+        def __init__(self):
+            self.prefix = b'email='
+            self.suffix = b'&UID=10&role=user'
+            self.quote_chars = b'=&'
+            self.engine = EncryptECB('aes', key)
+        
+        def __call__(self, message: bytes) -> bytes:
+            for c in self.quote_chars:
+                b = bytes([c])
+                message = message.replace(b, b'"' + b + b'"')
+            return self.engine(self.prefix + message + self.suffix)
+
+    class server:
+        def __init__(self):
+            self.engine = DecryptECB('aes', key)
+        def __call__(self, ciphertext: bytes) -> bytes:
+            message = self.engine(ciphertext)
+            return parse_dict(message)
     
-    return server, client
+    return server(), client()
