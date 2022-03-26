@@ -38,7 +38,7 @@ def evidence_of_ECB(ciphertext: Union[bytes, Collection[bytes]],
     Returns:
         True if evidence is found, False otherwise.
     """
-    if not isinstance(ciphertext, Collection):
+    if isinstance(ciphertext, bytes):
         ciphertext = [ciphertext]
 
     blocks = []
