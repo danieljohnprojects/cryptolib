@@ -133,6 +133,8 @@ def get_additional_message_len(
     """
     Determines the length of any prefix and suffix added to a message before being encrypted by a block cipher.
 
+    We assume that the IV is not present in the ciphertext returned from the oracle and that if an IV is used by the oracle, it remains fixed.
+
     The method for determining the prefix length is most easily explained with an example:
 
     Suppose we have an encryption oracle that takes a message, prepends 'A' to it, appends 'B' to it, pads the altered message, and finally encrypts it with a block size of 4. So given an empty string the oracle returns the encryption of the string "AB\x02\x02".
@@ -164,7 +166,7 @@ def get_additional_message_len(
         The length of the prefix and suffix added to the plaintext prior to encryption.
     Raises:
         ValueError: If the allowable_bytes argument consists of less than two distinct characters.
-        RuntimeError: If the oracle encrypts the two different messages to the same cipher.
+        RuntimeError: If the oracle encrypts the two different messages to the same cipher or if the oracle encrypts the same message to different ciphertexts.
     """
     if allowable_bytes:
         # Need to make sure we don't use the same byte for c and d.
@@ -176,6 +178,10 @@ def get_additional_message_len(
     else:
         a = b'a'
         b = b'b'
+
+    # Send the same message twice to check that they encrypt the same.
+    if oracle(a) != oracle(a):
+        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
 
     indices = []
     lengths = []
@@ -219,7 +225,7 @@ def decrypt_suffix(
     """
     Decrypts the suffix added by the oracle to the plaintext prior to encryption.
 
-    The oracle is assumed to take in a message of bytes, prepend a secret prefix, append a secret suffix, and then pad and encrypt the altered plaintext using a block cipher.
+    The oracle is assumed to take in a message of bytes, prepend a secret prefix, append a secret suffix, and then pad and encrypt the altered plaintext using a block cipher. If the oracle uses an IV it is assumed this is fixed and not included in the message.
 
     For example an oracle might take a message, prepend the string 'PPP', append the string 'SSS', pad to the appropriate length and then encrypt. Supposing the oracle used a block size of 4 bytes, the message 'abcd' is processed as follows:
 
@@ -246,11 +252,8 @@ def decrypt_suffix(
     Returns:
         The decrypted suffix that was added to the message.
     Raises:
-        RuntimeError: If the function was unsuccessful in decrypting the suffix.
+        RuntimeError: If the provided oracle appears to use randomised encryption or if the function was unsuccessful in decrypting the suffix.
     """
-    # Number of blocks taken up by the prefix:
-    num_prefix_blocks = prefix_len // block_size + 1
-
     # Make sure bytes in allowable bytes are unique
     allowable_bytes = bytes(set(allowable_bytes))
     if allowable_bytes:
@@ -258,6 +261,13 @@ def decrypt_suffix(
     else:
         a = b'a'
         allowable_bytes = bytes(range(256))
+
+    # Check for randomised encryption
+    if oracle(a) != oracle(a):
+        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
+    
+    # Number of blocks taken up by the prefix:
+    num_prefix_blocks = prefix_len // block_size + 1
 
     # To make life simple we fill out the prefix blocks if needed
     message = a * (num_prefix_blocks * block_size - prefix_len)
