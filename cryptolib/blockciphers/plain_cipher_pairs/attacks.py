@@ -37,4 +37,4 @@ def exhaust_key(
         if cipher(plaintext) == target_ciphertext:
             return test_key
     else:
-        RuntimeError("No key found to ")
+        raise RuntimeError("No key found that produces a matching plaintext-ciphertext pair.")
