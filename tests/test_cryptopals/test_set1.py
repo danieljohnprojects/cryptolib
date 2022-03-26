@@ -3,11 +3,12 @@ import pytest
 from cryptolib.cracks.two_time_pad import decrypt_single_byte_xor
 from cryptolib.cracks.substitution import decrypt_repeating_key_xor
 
-from cryptolib.utils.byteops import cyclical_xor, bytes_to_blocks
+from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import ScrabbleScorer
 
-from cryptolib.pipes import ECBDecrypt
+from cryptolib.blockciphers.chosen_cipher.oracles import DecryptECB
+from cryptolib.blockciphers.ciphertext_only.attacks import evidence_of_ECB
 
 from .data import challenge04, challenge06, challenge07, challenge08
 
@@ -150,7 +151,7 @@ def test_Challenge07():
     ciphertext = bytes.fromhex(b64_string_to_hex(challenge07.cipher))
     key = bytes(b'YELLOW SUBMARINE')
     solution = bytes(challenge07.solution)
-    oracle = ECBDecrypt('aes', key)
+    oracle = DecryptECB('aes', key)
     assert oracle(ciphertext) == solution
 
 def test_Challenge08():
@@ -169,7 +170,7 @@ def test_Challenge08():
 
     B = 16
     for ctext in ciphertexts:
-        blocks = bytes_to_blocks(ctext, B)
-        if len(blocks) != len(set(blocks)):
+        if evidence_of_ECB(bytes.fromhex(ctext)):
             ecb_enc = bytes.fromhex(ctext)
+            break
     assert ecb_enc == solution
