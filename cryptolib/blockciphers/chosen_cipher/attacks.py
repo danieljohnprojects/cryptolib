@@ -48,15 +48,17 @@ def decrypt_padding_oracle_cbc(
     Returns:
         The decryption of the ciphertext.
     Raises:
-        ValueError: If the ciphertext does not consist of at least two blocks.
+        ValueError: If the provided ciphertext has the wrong length.
         RuntimeError: If the ciphertext could not be decrypted.
     """
+    if len(ciphertext) % block_size != 0:
+        raise ValueError(f"Length of ciphertext must be a multiple of the provided block size, got {len(ciphertext)}")
+    if len(ciphertext) < 2*block_size:
+        raise ValueError(f"Ciphertext must contain at least two blocks in order to decrypt! Length of provided ciphertext was {len(ciphertext)}.")
+
     # We need to use this over and over so make it read only
     cipher_blocks = tuple(bytes_to_blocks(ciphertext, block_size))
-    if len(cipher_blocks) < 2:
-        raise ValueError(
-            f"Ciphertext must consist of at least two blocks, the first being the IV. Got {len(cipher_blocks)}.")
-
+    
     # We'll overwrite this copy a bunch
     blocks = list(cipher_blocks)
     decrypted_message = b''
@@ -86,7 +88,8 @@ def decrypt_padding_oracle_cbc(
         pad = 1
     decrypted_block = bytes(pad*[pad])
 
-    plaintext_length = len(ciphertext) - pad
+    # Plaintext plus padding should have length equal to the ciphertext minus the IV block
+    plaintext_length = len(ciphertext) - block_size
 
     ############################
     #### Decrypt ciphertext ####
@@ -122,5 +125,6 @@ def decrypt_padding_oracle_cbc(
         blocks.pop()
         blocks[-1] = cipher_block
 
-    assert len(decrypted_message) == plaintext_length
+    assert len(decrypted_message) == plaintext_length, f"decrypted length: {len(decrypted_message)}, expected length: {plaintext_length}"
+
     return decrypted_message
