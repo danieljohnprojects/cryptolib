@@ -2,11 +2,11 @@
 Functions for breaking ciphers related to substitution ciphers.
 """
 
-from typing import Optional
-from ..cracks.two_time_pad import decrypt_two_time_pad
+from typing import Collection, Optional
+
+from .two_time_pad import decrypt_two_time_pad
 from ..utils.byteops import block_xor, hamming_distance
 from ..utils.plain_scoring import Scorer
-from collections.abc import Collection
 
 
 def decrypt_repeating_key_xor(

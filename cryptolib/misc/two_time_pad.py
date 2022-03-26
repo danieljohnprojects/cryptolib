@@ -3,8 +3,8 @@ Functions for breaking two time pads and related problems.
 """
 
 from typing import Optional, Tuple
-from ..utils.byteops import cyclical_xor, block_xor
 
+from ..utils.byteops import cyclical_xor, block_xor
 from ..utils.plain_scoring import Scorer, ScrabbleScorer
 
 def decrypt_single_byte_xor(
