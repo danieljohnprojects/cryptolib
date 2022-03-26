@@ -25,26 +25,6 @@ def test_get_block_size():
     assert get_block_size(oracle, allowable_bytes=b'bcdefghijklmnop') == 25
 
 
-def test_diagnose_mode():
-    rng = random.Random(12345)
-    key = rng.randbytes(16)
-    modes = {
-        'cbc': EncryptCBC_fixed_iv, 
-        'cfb': EncryptCFB_fixed_iv,
-        'ecb': EncryptECB, 
-        'ofb': EncryptOFB_fixed_iv
-    }
-    for mode, constructor in modes.items():
-        oracle = constructor('aes', key)
-        assert diagnose_mode(oracle, 16) == mode
-    with pytest.raises(ValueError):
-        oracle = EncryptCBC_fixed_iv('aes')
-        diagnose_mode(oracle, 16, b'a')
-    with pytest.raises(RuntimeError):
-        oracle = EncryptCFB('aes')
-        diagnose_mode(oracle, 16)
-
-
 def test_get_additional_message_len():
     rng = random.Random(12345)
 
@@ -91,6 +71,7 @@ def test_get_additional_message_len():
     prefix_len, suffix_len = get_additional_message_len(oracle, 16)
     assert suffix_len == len(oracle.suffix)
     assert prefix_len == len(oracle.prefix)
+
     with pytest.raises(ValueError):
         get_additional_message_len(oracle, 16, b'a')
     with pytest.raises(ValueError):
@@ -100,6 +81,44 @@ def test_get_additional_message_len():
     with pytest.raises(RuntimeError):
         prefix_len, suffix_len = get_additional_message_len(oracle, 16)
     
+
+def test_diagnose_mode():
+    rng = random.Random(12345)
+    key = rng.randbytes(16)
+    modes = {
+        'cbc': EncryptCBC_fixed_iv, 
+        'cfb': EncryptCFB_fixed_iv,
+        'ecb': EncryptECB, 
+        'ofb': EncryptOFB_fixed_iv
+    }
+    for mode, constructor in modes.items():
+        oracle = constructor('aes', key)
+        assert diagnose_mode(oracle, 16) == mode
+    with pytest.raises(ValueError):
+        oracle = EncryptCBC_fixed_iv('aes')
+        diagnose_mode(oracle, 16, allowable_bytes= b'a')
+    with pytest.raises(RuntimeError):
+        oracle = EncryptCFB('aes')
+        diagnose_mode(oracle, 16)
+
+    # Additional plaintext and quoting characters should not alter results of function:
+    class additional_plaintext_oracle:
+        def __init__(self, engine_constructor):
+            self.engine = engine_constructor('aes', key)
+            self.prefix = b'email='
+            self.suffix = b'&UID=10&role=user'
+            self.quote_chars = b'=&'
+        def __call__(self, message: bytes) -> bytes:
+            for c in self.quote_chars:
+                b = bytes([c])
+                message = message.replace(b, b'"' + b + b'"')
+            return self.engine(self.prefix + message + self.suffix)
+
+    allowable_bytes = bytes(set(range(256)) - set([ord('&'), ord('=')]))
+    for mode, constructor in modes.items():
+        oracle = additional_plaintext_oracle(constructor)
+        assert diagnose_mode(oracle, 16, prefix_length=len(oracle.prefix), allowable_bytes=allowable_bytes) == mode
+
 
 def test_decrypt_suffix():
     rng = random.Random(12345)

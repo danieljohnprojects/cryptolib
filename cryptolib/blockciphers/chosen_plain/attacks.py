@@ -59,73 +59,6 @@ def get_block_size(
     return gcd(*block_lens)
 
 
-def diagnose_mode(
-        oracle: Callable,
-        block_size: int,
-        allowable_bytes: Optional[bytes] = b'') -> str:
-    """
-    Determines the mode of operation for the given block cipher oracle. This is only possible if the oracle uses a fixed IV or is in ECB mode.
-
-    It is assumed that the oracle will pad the given message and possibly prepend the IV (if it uses one).
-
-    Args:
-        oracle: The block cipher oracle.
-        block_size: The block size of the oracle.
-        allowable_bytes:  A string of bytes that are allowed to be given to the oracle. If this is empty it is assumed that any byte is allowed.
-    Returns:
-        One of 'ecb', 'cbc', 'cfb', or 'ofb'.
-    Raises:
-        ValueError: if only 1 allowable byte is provided.
-        RuntimeError: if it appears the oracle does not use a fixed IV or if it produces ciphertext of unexpected length.
-    """
-    if len(allowable_bytes) == 1:
-        raise ValueError("Must specify more than one allowable byte.")
-    
-    if allowable_bytes:
-        c = bytes([allowable_bytes[0]])
-        d = bytes([allowable_bytes[1]])
-    else:
-        c = b'a'
-        d = b'b'
-
-    # First we need to check that a fixed plaintext encrypts to a fixed ciphertext.
-    plaintext = c*block_size
-    ciphertext = oracle(plaintext)
-    if oracle(plaintext) != ciphertext:
-        raise RuntimeError("Provided oracle does not appear to use a fixed IV.")
-
-    # Now craft a plaintext with repeated blocks to check for ECB mode.
-    plaintext += plaintext
-    ciphertext = oracle(plaintext)
-    if evidence_of_ECB(ciphertext, block_size):
-        return 'ecb'
-    
-    # CFB and OFB both have the property that a 1-bit change in the first block of plaintext produces the same 1-bit change in the corresponding block of ciphertext.
-    plaintext1 = c*(block_size - 1) # Make it just short of a full block so we don't get a full block of padding at the end
-    ciphertext1 = oracle(plaintext1)
-    plaintext2 = c*(block_size - 2) + d
-    ciphertext2 = oracle(plaintext2)
-
-    plaindiff = block_xor(
-        pkcs7(plaintext1, block_size), 
-        pkcs7(plaintext2, block_size) )
-    # Make sure to only look at the last block of ciphertext, in case the IV is prepended.
-    cipherdiff = block_xor(ciphertext1[-block_size:], ciphertext2[-block_size:])
-    if plaindiff != cipherdiff:
-        return "cbc"
-
-    # To discriminate between CFB and OFB we need to see if changing the first block of plaintext affects the rest of them.
-    plaintext1 = c*block_size*3
-    ciphertext1 = oracle(plaintext1)
-    plaintext2 = d*block_size + c*block_size*2
-    ciphertext2 = oracle(plaintext2)
-
-    if ciphertext1[-block_size:] == ciphertext2[-block_size:]:
-        return "ofb"
-    else:
-        return "cfb"
-
-
 def get_additional_message_len(
         oracle: Callable,
         block_size: int = 16,
@@ -214,6 +147,70 @@ def get_additional_message_len(
     suffix_len = total_len - prefix_len
 
     return prefix_len, suffix_len
+
+
+def diagnose_mode(
+        oracle: Callable,
+        block_size: int,
+        prefix_length: int = 0,
+        allowable_bytes: Optional[bytes] = b'') -> str:
+    """
+    Determines the mode of operation for the given block cipher oracle. This is only possible if the oracle uses a fixed IV or is in ECB mode.
+
+    It is assumed that the oracle will pad the given message and possibly prepend the IV (if it uses one).
+
+    Args:
+        oracle: The block cipher oracle.
+        block_size: The block size of the oracle.
+        allowable_bytes:  A string of bytes that are allowed to be given to the oracle. If this is empty it is assumed that any byte is allowed.
+    Returns:
+        One of 'ecb', 'cbc', 'cfb', or 'ofb'.
+    Raises:
+        ValueError: if only 1 allowable byte is provided.
+        RuntimeError: if it appears the oracle does not use a fixed IV, does not operate in a supported block cipher mode, or the oracle produces ciphertext of unexpected length.
+    """
+    if len(allowable_bytes) == 1:
+        raise ValueError("Must specify more than one allowable byte.")
+    
+    if allowable_bytes:
+        c = bytes([allowable_bytes[0]])
+        d = bytes([allowable_bytes[1]])
+    else:
+        c = b'a'
+        d = b'b'
+
+    # First we need to check that a fixed plaintext encrypts to a fixed ciphertext.
+    plaintext = c*block_size
+    ciphertext = oracle(plaintext)
+    if oracle(plaintext) != ciphertext:
+        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
+
+    # Now craft a plaintext with repeated blocks to check for ECB mode.
+    plaintext *= 10 # Don't actually need this many but just to be safe.
+    ciphertext = oracle(plaintext)
+    if evidence_of_ECB(ciphertext, block_size):
+        return "ecb"
+
+    plaintext1 = c*(block_size - prefix_length - 1) + c
+    plaintext2 = c*(block_size - prefix_length - 1) + d
+    ciphertext1 = oracle(plaintext1)
+    ciphertext2 = oracle(plaintext2)
+
+    bytes_diff = 0
+    for x,y in zip(ciphertext1, ciphertext2):
+        if x != y:
+            bytes_diff += 1
+    
+    # OFB is essentially a stream cipher so a change to one byte of the plaintext will leave all bytes of the ciphertext the same except for one.
+    if bytes_diff == 1:
+        return "ofb"
+    # In CBC changing a plaintext byte will change the entire block and everything after it. In CFB changing a plaintext byte will change the corresponding byte, leaving the rest of that block unchanged, and then change everything after that.
+    elif bytes_diff % block_size == 0:
+        return "cbc"
+    elif bytes_diff % block_size == 1:
+        return "cfb"
+    else:
+        raise RuntimeError("The provided oracle does not operate in one of the supported block cipher modes.")
 
 
 def decrypt_suffix(
