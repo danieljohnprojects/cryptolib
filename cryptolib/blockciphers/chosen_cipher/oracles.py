@@ -60,3 +60,12 @@ class DecryptOFB(EncryptOFB):
     Note that in OFB there is no difference between encryption and decryption
     """
     pass
+
+
+class PaddingCBC(DecryptCBC):
+    """
+    Decrypts the supplied bytes in CBC mode, then checks the padding. If all is in order returns nothing, otherwise raises a padding error.
+    """
+    def __call__(self, ciphertext: bytes):
+        super().__call__(ciphertext)
+        return
