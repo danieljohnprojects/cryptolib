@@ -1,7 +1,7 @@
 import pytest
 import random
 
-from cryptolib.blockciphers import AES
+from cryptolib.blockciphers.algorithms import AES
 
 random.seed(1)
 
