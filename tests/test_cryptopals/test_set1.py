@@ -1,7 +1,7 @@
 import pytest
 
-from cryptolib.cracks.two_time_pad import decrypt_single_byte_xor
-from cryptolib.cracks.substitution import decrypt_repeating_key_xor
+from cryptolib.misc.two_time_pad import decrypt_single_byte_xor
+from cryptolib.misc.substitution import decrypt_repeating_key_xor
 
 from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
