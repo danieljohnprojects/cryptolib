@@ -89,3 +89,52 @@ class EncryptOFB(EncryptECB):
             cipher_output = self._engine.encrypt(cipher_output)
             cipher_blocks.append(block_xor(block, cipher_output))
         return b''.join(cipher_blocks)
+
+
+class EncryptCBC_fixed_iv(EncryptECB):
+    def __init__(self, 
+                 algorithm: str, 
+                 key: Optional[bytes] = None, 
+                 iv: Optional[bytes] = None):
+        super().__init__(algorithm, key)
+        if not iv:
+            iv = secrets.token_bytes(self._block_size)
+        self._iv = iv
+    
+    def __call__(self, message: bytes) -> bytes:
+        message = pkcs7(message, self._block_size)
+        message_blocks = bytes_to_blocks(message, self._block_size)
+        
+        cipher_blocks = [self._iv]
+
+        for block in message_blocks:
+            cipher_input = block_xor(block, cipher_blocks[-1])
+            cipher_blocks.append(self._engine.encrypt(cipher_input))
+        return b''.join(cipher_blocks)
+
+
+class EncryptCFB_fixed_iv(EncryptCBC_fixed_iv):
+    def __call__(self, message: bytes) -> bytes:
+        message = pkcs7(message, self._block_size)
+        message_blocks = bytes_to_blocks(message, self._block_size)
+        
+        cipher_blocks = [self._iv]
+
+        for block in message_blocks:
+            cipher_output = self._engine.encrypt(cipher_blocks[-1])
+            cipher_blocks.append(block_xor(block, cipher_output))
+        return b''.join(cipher_blocks)
+
+
+class EncryptOFB_fixed_iv(EncryptCBC_fixed_iv):
+    def __call__(self, message: bytes) -> bytes:
+        message = pkcs7(message, self._block_size)
+        message_blocks = bytes_to_blocks(message, self._block_size)
+        
+        cipher_blocks = [self._iv]
+
+        cipher_output = cipher_blocks[0]
+        for block in message_blocks:
+            cipher_output = self._engine.encrypt(cipher_output)
+            cipher_blocks.append(block_xor(block, cipher_output))
+        return b''.join(cipher_blocks)
