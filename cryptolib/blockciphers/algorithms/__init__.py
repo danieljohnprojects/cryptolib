@@ -1,3 +1,4 @@
+from .BCEngine import BCEngine
 from .AES import AES
 
 # Mapping from name of algorithm to a tuple consisting of:

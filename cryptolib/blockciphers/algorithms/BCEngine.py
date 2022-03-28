@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-
-# Consider changing the name of this class to BCEngine to avoid confusion with RNGEngines.
-class Engine(ABC):
+class BCEngine(ABC):
     """
     An object that encrypts/decrypts a block of bytes using a pre-initialised key.
 

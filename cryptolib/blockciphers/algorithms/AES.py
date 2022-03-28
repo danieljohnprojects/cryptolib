@@ -1,8 +1,8 @@
 from ctypes import *
-from .Engine import Engine
+from .BCEngine import BCEngine
 from ...utils.files import build_filename
 
-class AES(Engine):
+class AES(BCEngine):
     """
     An object that encrypts/decrypts a block of bytes using AES.
 
