@@ -1,7 +1,7 @@
 import pytest
 import random
 
-from cryptolib.rngs import MT19937
+from cryptolib.prfs import MT19937
 
 expected_out = [
     3499211612,
@@ -3128,17 +3128,29 @@ expected_out = [
 
 
 def test_int_seed():
+    with pytest.raises(ValueError):
+        rng = MT19937(-1)
+    with pytest.raises(ValueError):
+        rng = MT19937(MT19937.max_int)
+    with pytest.raises(ValueError):
+        rng = MT19937([0])
+    with pytest.raises(ValueError):
+        rng = MT19937([0]*MT19937.state_array_length, index=-1)
+    with pytest.raises(ValueError):
+        rng = MT19937([0]*MT19937.state_array_length, index=MT19937.state_array_length)
+    with pytest.raises(ValueError):
+        rng = MT19937(1, index=1)
+    with pytest.raises(TypeError):
+        rng = MT19937('a')
+    with pytest.raises(TypeError):
+        rng = MT19937([0]*(MT19937.state_array_length - 1) + ['a'])
+    
     seed = 5489
     # pyrng = random.Random(seed)
     # Can't use the python RNG for this one, it does weird stuff for seeding.
     rng = MT19937(seed)
     for i in range(5*624):
         assert(rng.rand() == expected_out[i])
-
-# def test_bytes_seed():
-#     rng = MT19937(b'\x00\x00\x15\x71') # 5489 == 0x1571
-#     for i in range(5*624):
-#         assert(rng.rand() == expected_out[i])
 
 def test_set_state():
     pyrng = random.Random(0)
@@ -3153,10 +3165,13 @@ def test_set_state():
     # used to generate numbers from a Gaussin distribution. For us this will 
     # always be None.
     state = pyrng.getstate()[1][:-1]
-    # index = pyrng.getstate()[1][-1]
     rng = MT19937(state)
-    # assert rng._state[:4] == bytes(reversed(state[0]))
-    # for i in range(624, 5*624):
-        # assert(rng.rand() == expected_out[i])
+    for _ in range(1000):
+        assert rng.rand() == pyrng.getrandbits(32)
+    
+    pyrng = random.Random(1)
+    pyrng.getrandbits(32)
+    state = pyrng.getstate()[1][:-1]
+    rng = MT19937(state, index=1)
     for _ in range(1000):
         assert rng.rand() == pyrng.getrandbits(32)

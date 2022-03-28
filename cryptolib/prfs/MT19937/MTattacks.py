@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from .algorithms import MT19937
+from .MT19937 import MT19937
 
 
 def revert_to_state(output: int) -> int:

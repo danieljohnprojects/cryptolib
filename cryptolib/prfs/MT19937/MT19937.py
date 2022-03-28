@@ -1,7 +1,7 @@
 from ctypes import *
 from functools import reduce
 from typing import Sequence, Union
-from .RNG import RNGEngine
+from ..RNGEngine import RNGEngine
 from ...utils.files import build_filename
 
 class MT19937(RNGEngine):
@@ -28,13 +28,19 @@ class MT19937(RNGEngine):
 
 
     def __init__(self, seed: Union[int, Sequence[int]], index: int=0):
+        """
+        Args:
+            seed: An integer seed or sequence of integers to use as the state.
+            index: The index of the state from which the generator should continue. This can only be nonzero if the state is set with an array, not a single integer.
+        Raises:
+            ValueError: If an integer seed is outside the acceptable bounds, if the provided state does not match the length of the internal state, if the provided state includes invalid elements, if the provided index exceeds the internal state array bounds, or if a non-zero index is provided when seeding with a single integer.
+            TypeError: If the provided seed is not an integer or sequence of integers.
+        """
         # Check the seed value
         if isinstance(seed, int):
             if (seed < 0) or (seed >= self.max_int):
                 raise ValueError(f"Seed must be a positive integer that can be represented by a {self.int_length} byte unsigned int (got {seed}).")
         elif isinstance(seed, Sequence):
-            if (len(seed) != self.state_array_length):
-                raise ValueError(f"In order to set internal state a list of length {self.state_array_length} must be passed. Got a list of length {len(seed)}.")
             isint = [isinstance(x, int) for x in seed]
             if not all(isint):
                 offending_index = isint.index(False)
@@ -43,6 +49,8 @@ class MT19937(RNGEngine):
             if not all(isinrange):
                 offending_index = isinrange.index(False)
                 raise ValueError(f"In order to set internal state all integers in the list need to be between 0 and {self.max_int}. Element at index {offending_index} has value {seed[offending_index]}.")
+            if (len(seed) != self.state_array_length):
+                raise ValueError(f"In order to set internal state a list of length {self.state_array_length} must be passed. Got a list of length {len(seed)}.")
         else:
             raise TypeError(f"Seed must either be an int or sequence of ints, got {type(seed)}.")
         
@@ -62,6 +70,12 @@ class MT19937(RNGEngine):
         
 
     def rand(self) -> int:
+        """
+        Generate a random 32-bit integer and update the state as needed.
+
+        Returns:
+            An integer in the range [0, 2^32 - 1].
+        """
         if self._index % self.state_array_length == 0:
             self._MTlibC.twist(self._state)
         generated = self._MTlibC.extract32(self._state, self._index)
