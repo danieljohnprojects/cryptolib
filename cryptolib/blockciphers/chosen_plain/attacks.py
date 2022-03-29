@@ -164,7 +164,7 @@ def diagnose_mode(
         block_size: The block size of the oracle.
         allowable_bytes:  A string of bytes that are allowed to be given to the oracle. If this is empty it is assumed that any byte is allowed.
     Returns:
-        One of 'ecb', 'cbc', 'cfb', or 'ofb'.
+        One of 'ecb', 'cbc', 'cfb', or 'stream'.
     Raises:
         ValueError: if only 1 allowable byte is provided.
         RuntimeError: if it appears the oracle does not use a fixed IV, does not operate in a supported block cipher mode, or the oracle produces ciphertext of unexpected length.
@@ -191,23 +191,47 @@ def diagnose_mode(
     if evidence_of_ECB(ciphertext, block_size):
         return "ecb"
 
-    plaintext1 = c*(block_size - prefix_length - 1) + c
-    plaintext2 = c*(block_size - prefix_length - 1) + d
-    ciphertext1 = oracle(plaintext1)
-    ciphertext2 = oracle(plaintext2)
+    # To distinguish between CBC, CFB and stream cipher modes we look at how the ciphertext changes after a one byte change in the plaintext. 
+    #   - A stream cipher will always have exactly one byte that is different.
+    #   - In CBC mode the block in which the change occurred and every block after that will be scrambled. In general every byte of the following blocks will change, but it is possible that some bytes remain the same through random chance. We expect that the number of bytes that change will be a multiple of the block size.
+    #   - In CFB mode the block in which the change occurred will remain the same except for the byte that was altered, and every block after that will be scrambled. This usually means that the number of different bytes will be congruent to 1 modulo the block size. Again, this is not guaranteed however since some of the bytes in the remaining blocks could remain the same by chance.
 
-    bytes_diff = 0
-    for x,y in zip(ciphertext1, ciphertext2):
-        if x != y:
-            bytes_diff += 1
+    # We will send queries to the oracle in pairs constructed in the following way:
+    #   - In both queries we pad out the blocks that contain the prefix with the same byte.
+    #   - Then we construct two blocks that differ in exactly one byte.
+    #   - We expect the last block to be a padding block.
+    # So a pair of plaintext queries look like:
+    #   pref|ixaa|aaaa|....
+    #   pref|ixaa|baaa|....
+    # Where "." represents padding added by the oracle, and "|" represents block boundaries.
+    # We send multiple pairs where the byte that differs changes for each pair. So the next pair might look like:
+    #   pref|ixaa|aaaa|....
+    #   pref|ixaa|abaa|....
+
+    # We want to minimise the number of blocks that are added as padding, thus reducing the number of blocks in which a byte could remain the same by chance.
+    # In CBC mode with a block size of 16, there is approximately a 94% chance that a block of altered ciphertext has no bytes in common with corresponding block of unaltered ciphertext ( (255/256)^16 = 0.939 ). 
+    # If we send 16 messages it is highly likely that one of them will produce the desired behaviour, allowing us to distinguish between CBC and CFB easily.
+
+    prefix_fill_size = (block_size - prefix_length) % block_size
+    max_bytes_diff = 0
+    plaintext1 = c*(prefix_fill_size + block_size)
+    ciphertext1 = oracle(plaintext1)
+    for i in range(block_size):
+        plaintext2 = c*prefix_fill_size + c*i + d + c*(block_size - 1 - i)
+        ciphertext2 = oracle(plaintext2)
+        bytes_diff = 0
+        for x,y in zip(ciphertext1, ciphertext2):
+            if x != y:
+                bytes_diff += 1
+        max_bytes_diff = max(max_bytes_diff, bytes_diff)
     
     # OFB is essentially a stream cipher so a change to one byte of the plaintext will leave all bytes of the ciphertext the same except for one.
-    if bytes_diff == 1:
-        return "ofb"
+    if max_bytes_diff == 1:
+        return "stream"
     # In CBC changing a plaintext byte will change the entire block and everything after it. In CFB changing a plaintext byte will change the corresponding byte, leaving the rest of that block unchanged, and then change everything after that.
-    elif bytes_diff % block_size == 0:
+    elif max_bytes_diff % block_size == 0:
         return "cbc"
-    elif bytes_diff % block_size == 1:
+    elif max_bytes_diff % block_size == 1:
         return "cfb"
     else:
         raise RuntimeError("The provided oracle does not operate in one of the supported block cipher modes.")
