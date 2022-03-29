@@ -7,7 +7,7 @@ class BlockCipherCTR:
     """
     
     """
-    def __init__(self, algorithm: str, key: bytes, nonce_size: int):
+    def __init__(self, algorithm: str, key: bytes, nonce_size: int, ctr_endianness: str = 'big'):
         """
         Initialises a stream cipher using a block cipher in CTR mode.
 
@@ -26,6 +26,7 @@ class BlockCipherCTR:
         self.max_message_blocks = pow(2, (self._engine.block_size - self.nonce_size) * 8)
         self.nonce = 0
         self._nonce_has_wrapped = False
+        self.ctr_endianness = ctr_endianness
 
     def encrypt(self, message: bytes) -> bytes:
         """
@@ -46,9 +47,8 @@ class BlockCipherCTR:
         if nblocks > self.max_message_blocks:
             raise ValueError(f"Message of {len(message)} bytes is too long to encrypt. With nonce size of {self.nonce_size} the maximum message length is {self.max_message_blocks * self._engine.block_size}.")
 
-        nonce = self.nonce << (self._engine.block_size - self.nonce_size)
-        keystream = [ n + i for n,i in zip([nonce]*nblocks, range(nblocks))]
-        keystream = map(lambda x: x.to_bytes(self._engine.block_size, 'big'), keystream)
+        nonce_bytes = self.nonce.to_bytes(self.nonce_size, 'big')
+        keystream = [ nonce_bytes + i.to_bytes(self._engine.block_size - self.nonce_size, self.ctr_endianness) for i in range(nblocks)]
         keystream = map(self._engine.encrypt, keystream)
         keystream = b''.join(keystream)
         keystream = keystream[:len(message)]
@@ -64,16 +64,14 @@ class BlockCipherCTR:
         return ciphertext
 
     def decrypt(self, ciphertext: bytes) -> bytes:
-        nonce = int.from_bytes(ciphertext[:self.nonce_size], 'big', signed=False)
+        nonce_bytes = ciphertext[:self.nonce_size]
         ciphertext = ciphertext[self.nonce_size:]
 
         nblocks = ceil(len(ciphertext) / self._engine.block_size)
         if nblocks > self.max_message_blocks:
             raise ValueError(f"Ciphertext of {len(ciphertext)} bytes is too long to decrypt. With nonce size of {self.nonce_size} the maximum message length is {self.max_message_blocks * self._engine.block_size}.")
 
-        nonce = nonce << (self._engine.block_size - self.nonce_size)
-        keystream = [ n + i for n,i in zip([nonce]*nblocks, range(nblocks))]
-        keystream = map(lambda x: x.to_bytes(self._engine.block_size, 'big'), keystream)
+        keystream = [ nonce_bytes + i.to_bytes(self._engine.block_size - self.nonce_size, self.ctr_endianness) for i in range(nblocks) ]
         keystream = map(self._engine.encrypt, keystream)
         keystream = b''.join(keystream)
         keystream = keystream[:len(ciphertext)]
