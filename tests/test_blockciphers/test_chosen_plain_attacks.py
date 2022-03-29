@@ -1,9 +1,64 @@
 import pytest
 import random
+from Crypto.Cipher import AES
 
 from cryptolib.blockciphers.chosen_plain.attacks import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
 from cryptolib.blockciphers.chosen_plain.oracles import EncryptECB, EncryptCBC, EncryptCFB, EncryptOFB, EncryptCBC_fixed_iv, EncryptCFB_fixed_iv, EncryptOFB_fixed_iv
 from cryptolib.utils.padding import pkcs7
+
+
+def test_oracles():
+    rng = random.Random(12345)
+
+    key_lens = [16] * 10 + [24] * 10 + [32] * 10
+
+    # Test ECB mode
+    for key_len in key_lens:
+        key = rng.randbytes(key_len)
+
+        reference_cipher = AES.new(key, AES.MODE_ECB)
+        oracle = EncryptECB('aes', key)
+
+        message = rng.randbytes(48)
+        enc_message = oracle(message)
+        expected_out = reference_cipher.encrypt(pkcs7(message, 16))
+        assert enc_message == expected_out
+
+    # Test CBC and OFB
+    modes = {
+        'cbc': (EncryptCBC, AES.MODE_CBC), 
+        'ofb': (EncryptOFB, AES.MODE_OFB)
+    }
+    for key_len in key_lens:
+        for _, objects in modes.items():
+            oracle_constructor = objects[0]
+            reference_mode = objects[1]
+
+            key = rng.randbytes(key_len)
+
+            oracle = oracle_constructor('aes', key)
+
+            message = rng.randbytes(48)
+            enc_message = oracle(message)
+            iv = enc_message[:16]
+
+            reference_cipher = AES.new(key, reference_mode, iv)
+            expected_out = reference_cipher.encrypt(pkcs7(message, 16))
+            assert enc_message[16:] == expected_out
+
+    # Test CFB
+    for key_len in key_lens:
+        key = rng.randbytes(key_len)
+
+        oracle = EncryptCFB('aes', key)
+
+        message = rng.randbytes(48)
+        enc_message = oracle(message)
+
+        iv = enc_message[:16]
+        reference_cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
+        expected_out = reference_cipher.encrypt(pkcs7(message, 16))
+        assert enc_message[16:] == expected_out
 
 
 def test_get_block_size():
@@ -89,14 +144,24 @@ def test_diagnose_mode():
         'cbc': EncryptCBC_fixed_iv, 
         'cfb': EncryptCFB_fixed_iv,
         'ecb': EncryptECB, 
-        'ofb': EncryptOFB_fixed_iv
+        'stream': EncryptOFB_fixed_iv
     }
     for mode, constructor in modes.items():
         oracle = constructor('aes', key)
         assert diagnose_mode(oracle, 16) == mode
+
+    # Check that probabilistic approach to CBC checking is working.
+    for _ in range(100):
+        key = rng.randbytes(16)
+        oracle = EncryptCBC_fixed_iv('aes', key)
+        assert diagnose_mode(oracle, 16) == 'cbc'
+
+    # Raises error if only one allowable byte is given
     with pytest.raises(ValueError):
         oracle = EncryptCBC_fixed_iv('aes')
         diagnose_mode(oracle, 16, allowable_bytes= b'a')
+
+    # Raises error if variable IV is used.
     with pytest.raises(RuntimeError):
         oracle = EncryptCFB('aes')
         diagnose_mode(oracle, 16)
