@@ -44,7 +44,7 @@ class AES(BCEngine):
     def encrypt(self, message: bytes) -> bytes:
         if (len(message) != self.block_size):
             raise ValueError(
-                f"Message length must be f{self.block_size} bytes. Got {len(message)}.")
+                f"Message length must be {self.block_size} bytes. Got {len(message)}.")
 
         ciphertext = create_string_buffer(self.block_size)
         self._libC.encrypt(self._key_schedule, message, ciphertext)
