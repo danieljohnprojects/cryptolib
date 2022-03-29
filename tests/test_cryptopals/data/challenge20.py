@@ -1,7 +1,6 @@
 import base64
+from cryptolib.streamciphers.algorithms import BlockCipherCTR
 from secrets import token_bytes
-from cryptolib.oracles import SequentialOracle
-from cryptolib.pipes import CTR
 
 messages = [
     b'SSdtIHJhdGVkICJSIi4uLnRoaXMgaXMgYSB3YXJuaW5nLCB5YSBiZXR0ZXIgdm9pZCAvIFBvZXRzIGFyZSBwYXJhbm9pZCwgREoncyBELXN0cm95ZWQ=',
@@ -67,9 +66,8 @@ messages = [
 ]
 
 messages = map(base64.b64decode, messages)
-enc = SequentialOracle([
-    lambda message: bytes(8) + message,
-    CTR('aes', token_bytes(16))
-])
-
-ciphertexts = list(map(enc, messages))
+cipher = BlockCipherCTR('aes', token_bytes(16), nonce_size=8)
+ciphertexts = []
+for m in messages:
+    cipher.nonce = 0
+    ciphertexts.append(cipher.encrypt(m))

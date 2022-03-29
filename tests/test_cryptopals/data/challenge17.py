@@ -1,11 +1,8 @@
 import secrets
 
 from base64 import b64decode
-from typing import Tuple
-
-from cryptolib.oracles import SequentialOracle, PaddingOracle
-from cryptolib.pipes import CBCEncrypt, AddIV
-from cryptolib.utils.padding import pkcs7
+from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC
+from cryptolib.blockciphers.chosen_cipher.oracles import PaddingCBC
 
 plaintexts = [
     b"MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
@@ -22,16 +19,8 @@ plaintexts = [
 
 plaintexts = list(map(b64decode, plaintexts))
 
-
-def create_server_client() -> Tuple[SequentialOracle, PaddingOracle]:
+def create_server_client():
     key = secrets.token_bytes(24)
-    client = SequentialOracle([
-        lambda message: pkcs7(message, 16),
-        AddIV(),
-        CBCEncrypt(
-            algorithm='aes',
-            key=key
-        )
-    ])
-    server = PaddingOracle('cbc', 'aes', key)
+    client = EncryptCBC('aes', key)
+    server = PaddingCBC('aes', key)
     return server, client
