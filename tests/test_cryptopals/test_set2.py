@@ -31,7 +31,6 @@ def test_Challenge09():
 
     assert pkcs7(test_in, 20) == solution
 
-
 def test_Challenge10():
     """
     CBC mode is a block cipher mode that allows us to encrypt irregularly-sized messages, despite the fact that a block cipher natively only transforms individual blocks.
@@ -52,7 +51,6 @@ def test_Challenge10():
     iv = bytes(16)
 
     assert oracle(iv + ciphertext) == solution
-
 
 def test_Challenge11():
     """
@@ -85,7 +83,6 @@ def test_Challenge11():
         except RuntimeError:
             mode = 'cbc' # throws an error if encryption is randomised.
         assert choice == mode
-
 
 def test_Challenge12():
     """
@@ -132,7 +129,6 @@ def test_Challenge12():
     _, suffix_len = get_additional_message_len(oracle, B)
     suffix = decrypt_suffix(oracle, suffix_len, block_size=B)
     assert suffix == challenge12.secret_suffix
-
 
 def test_Challenge13():
     """
@@ -201,7 +197,6 @@ def test_Challenge13():
 
     assert server(b''.join(cipherblocks)) == b'admin'
 
-
 def test_Challenge14():
     """
     Take your oracle function from #12. Now generate a random count of random bytes and prepend this string to every plaintext. You are now doing:
@@ -224,7 +219,6 @@ def test_Challenge14():
     prefix_len, suffix_len = get_additional_message_len(oracle, B)
     assert(diagnose_mode(oracle, block_size=B, prefix_length=prefix_len) == "cbc")
     assert decrypt_suffix(oracle, suffix_len, prefix_len, B) == oracle.suffix
-
 
 def test_Challenge15():
     """
@@ -260,7 +254,6 @@ def test_Challenge15():
         strip_pkcs7(test_values[1], 16)
     with pytest.raises(PaddingError):
         strip_pkcs7(test_values[2], 16)
-
 
 def test_Challenge16():
     """

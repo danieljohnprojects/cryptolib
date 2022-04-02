@@ -212,7 +212,6 @@ def test_Challenge23():
     """
     test_replicate_MT19937_state()
 
-
 def test_Challenge24():
     """
     You can create a trivial stream cipher out of any PRNG; use it to generate a sequence of 8 bit outputs and call those outputs a keystream. XOR each byte of plaintext with each successive byte of keystream.
