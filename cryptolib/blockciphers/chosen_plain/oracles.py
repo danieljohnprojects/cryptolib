@@ -1,5 +1,5 @@
 """
-A collection of oracles that can be attacked with chosen plaintext attacks.
+A collection of block cipher oracles including some misimplementations that can be attacked with chosen plaintext attacks.
 """
 
 import secrets
@@ -138,3 +138,17 @@ class EncryptOFB_fixed_iv(EncryptCBC_fixed_iv):
             cipher_output = self._engine.encrypt(cipher_output)
             cipher_blocks.append(block_xor(block, cipher_output))
         return b''.join(cipher_blocks)
+
+
+class EncryptCBC_key_as_iv(EncryptCBC):
+    def __call__(self, message: bytes) -> bytes:
+        key = self._engine._key_schedule[:self._block_size]
+        message = pkcs7(message, self._block_size)
+        message_blocks = bytes_to_blocks(message, self._block_size)
+        
+        cipher_blocks = [key]
+
+        for block in message_blocks:
+            cipher_input = block_xor(block, cipher_blocks[-1])
+            cipher_blocks.append(self._engine.encrypt(cipher_input))
+        return b''.join(cipher_blocks[1:])

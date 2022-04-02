@@ -69,3 +69,13 @@ class PaddingCBC(DecryptCBC):
     def __call__(self, ciphertext: bytes):
         super().__call__(ciphertext)
         return
+
+
+class DecryptCBC_key_as_iv(DecryptCBC):
+    """
+    Decrypts the supplied bytes in CBC mode. It is assumed that the IV is not included in the provided ciphertext, instead the key is used as the IV.
+    """
+    def __call__(self, ciphertext: bytes) -> bytes:
+        key = self._engine._key_schedule[:self._block_size]
+        ciphertext = key + ciphertext
+        return super().__call__(ciphertext)
