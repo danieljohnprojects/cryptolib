@@ -3,9 +3,8 @@ import random
 from Crypto.Cipher import AES
 
 from cryptolib.blockciphers.chosen_plain.attacks import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptECB, EncryptCBC, EncryptCFB, EncryptOFB, EncryptCBC_fixed_iv, EncryptCFB_fixed_iv, EncryptOFB_fixed_iv
+from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC_key_as_iv, EncryptECB, EncryptCBC, EncryptCFB, EncryptOFB, EncryptCBC_fixed_iv, EncryptCFB_fixed_iv, EncryptOFB_fixed_iv
 from cryptolib.utils.padding import pkcs7
-
 
 def test_oracles():
     rng = random.Random(12345)
@@ -60,6 +59,18 @@ def test_oracles():
         expected_out = reference_cipher.encrypt(pkcs7(message, 16))
         assert enc_message[16:] == expected_out
 
+    # Test key as IV oracle
+    for key_len in key_lens:
+        key = rng.randbytes(key_len)
+
+        oracle = EncryptCBC_key_as_iv('aes', key)
+
+        message = rng.randbytes(48)
+        enc_message = oracle(message)
+
+        reference_cipher = AES.new(key, AES.MODE_CBC, iv=key[:16])
+        expected_out = reference_cipher.encrypt(pkcs7(message, 16))
+        assert enc_message == expected_out
 
 def test_get_block_size():
     rng = random.Random(12345)
@@ -78,7 +89,6 @@ def test_get_block_size():
     
     # Check that the allowable_bytes argument avoids the disallowed character.
     assert get_block_size(oracle, allowable_bytes=b'bcdefghijklmnop') == 25
-
 
 def test_get_additional_message_len():
     rng = random.Random(12345)
@@ -135,7 +145,6 @@ def test_get_additional_message_len():
     oracle = additional_plaintext_oracle_cbc()
     with pytest.raises(RuntimeError):
         prefix_len, suffix_len = get_additional_message_len(oracle, 16)
-    
 
 def test_diagnose_mode():
     rng = random.Random(12345)
@@ -183,7 +192,6 @@ def test_diagnose_mode():
     for mode, constructor in modes.items():
         oracle = additional_plaintext_oracle(constructor)
         assert diagnose_mode(oracle, 16, prefix_length=len(oracle.prefix), allowable_bytes=allowable_bytes) == mode
-
 
 def test_decrypt_suffix():
     rng = random.Random(12345)
@@ -233,5 +241,4 @@ def test_decrypt_suffix():
     oracle = additional_plaintext_oracle_cbc()
     with pytest.raises(RuntimeError):
         decrypt_suffix(oracle, len(oracle.suffix), len(oracle.prefix), 16)
-    
     
