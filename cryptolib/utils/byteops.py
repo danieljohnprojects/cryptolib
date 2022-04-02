@@ -78,3 +78,42 @@ def transpose(messages: list[bytes]) -> list[bytes]:
     """
     assert all([len(message) == len(messages[0]) for message in messages])
     return [bytes([message[i] for message in messages]) for i in range(len(messages[0]))]
+
+
+def reconstruct_from_str(s: str) -> bytes:
+    """
+    Reconstructs a bytes object that has been converted to a string. This sometimes happens in error messages and it's super annoying to get it back to the original bytes.
+
+    For example an error might return the f-string
+    f"Message {message} contains non-ascii characters!"
+    Python puts in a bunch of \\s to print the message. This function removes all the extra formatting and returns the original bytes of the message variable.
+    """
+    s = s[2:-1] # Get rid of b' at start and ' at end 
+
+    chunks = s.split("\\")
+    s = bytes(chunks[0], 'ascii')
+
+    skip_next_chunk = False
+    for chunk in chunks[1:]:
+        if skip_next_chunk:
+            s += bytes(chunk, 'ascii')
+            skip_next_chunk = False
+        elif len(chunk) == 0:
+            s += b'\\'
+            skip_next_chunk = True
+        elif chunk[0] == 'x':
+            s += bytes.fromhex(chunk[1:3])
+            s += bytes(chunk[3:], 'ascii')
+        elif chunk[0] == 't':
+            s += b'\t'
+            s += bytes(chunk[1:], 'ascii')
+        elif chunk[0] == 'n':
+            s += b'\n'
+            s += bytes(chunk[1:], 'ascii')
+        elif chunk[0] == 'r':
+            s += b'\r'
+            s += bytes(chunk[1:], 'ascii')
+        else:
+            s += bytes(chunk, 'ascii') 
+
+    return s
