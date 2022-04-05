@@ -3,9 +3,14 @@
  * @brief An implementation of the MD5 hash function. 
  * 
  * The MD5 hash takes in an arbitrary length message and computes a 128-bit 
- * value. We follow the description given in RFC 1321:
+ * value. We approximately follow the description given in RFC 1321:
  * http://www.faqs.org/rfcs/rfc1321.html
- * Except that we will always assume that messages are strings of bytes, rather
+ * The key difference is that we do not initialise the digest buffer to the 
+ * correct values. This makes it more convenient to perform length extension 
+ * attacks but passes the burden of initialisation to the user when computing a 
+ * regular hash.
+ * 
+ * We will always assume that messages are strings of bytes, rather
  * than of bits.
  * 
  * This code assumes little-endianness.
@@ -68,30 +73,30 @@ static void preprocess(const uint8_t *message,
 }
 
 
-/**
- * @brief Initialises the digest to the starting values shown in Step 3.
- * 
- * @param digest A pointer to the digest to be initialised.
- */
-static void init_digest(uint8_t digest[DIGEST_LENGTH])
-{
-    digest[0] = 0x01;
-    digest[1] = 0x23;
-    digest[2] = 0x45;
-    digest[3] = 0x67;
-    digest[4] = 0x89;
-    digest[5] = 0xab;
-    digest[6] = 0xcd;
-    digest[7] = 0xef;
-    digest[8] = 0xfe;
-    digest[9] = 0xdc;
-    digest[10] = 0xba;
-    digest[11] = 0x98;
-    digest[12] = 0x76;
-    digest[13] = 0x54;
-    digest[14] = 0x32;
-    digest[15] = 0x10;
-}
+// /**
+//  * @brief Initialises the digest to the starting values shown in Step 3.
+//  * 
+//  * @param digest A pointer to the digest to be initialised.
+//  */
+// static void init_digest(uint8_t digest[DIGEST_LENGTH])
+// {
+//     digest[0] = 0x01;
+//     digest[1] = 0x23;
+//     digest[2] = 0x45;
+//     digest[3] = 0x67;
+//     digest[4] = 0x89;
+//     digest[5] = 0xab;
+//     digest[6] = 0xcd;
+//     digest[7] = 0xef;
+//     digest[8] = 0xfe;
+//     digest[9] = 0xdc;
+//     digest[10] = 0xba;
+//     digest[11] = 0x98;
+//     digest[12] = 0x76;
+//     digest[13] = 0x54;
+//     digest[14] = 0x32;
+//     digest[15] = 0x10;
+// }
 
 
 /**
@@ -234,7 +239,7 @@ void md5digest(const uint8_t *message,
 
     size_t num_blocks = buffer_length / WORDS_PER_BLOCK;
 
-    init_digest(digest_buffer);
+    // init_digest(digest_buffer);
 
     for (size_t i = 0; i < num_blocks; i++)
     {

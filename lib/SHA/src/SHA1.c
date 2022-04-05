@@ -5,6 +5,12 @@
  * The SHA1 hash takes in an arbitrary length message and computes a 160-bit 
  * value. We approximately follow the description given in RFC 3174:
  * http://www.faqs.org/rfcs/rfc3174.html
+ * 
+ * The key difference is that we do not initialise the digest buffer to the 
+ * correct values. This makes it more convenient to perform length extension 
+ * attacks but passes the burden of initialisation to the user when computing a 
+ * regular hash.
+ * 
  * We will always assume that messages are strings of bytes, rather than of 
  * bits.
  * 
@@ -78,20 +84,20 @@ static void preprocess(const uint8_t *message,
 }
 
 
-/**
- * @brief Initialises the digest to the starting values H0, H1, H2, H3, 
- * H4 in step 6.
- * 
- * @param digest A pointer to the digest to be initialised.
- */
-static void init_digest(uint32_t digest[DIGEST_WORD_LENGTH])
-{
-    digest[0] = 0x01234567;
-    digest[1] = 0x89abcdef;
-    digest[2] = 0xfedcba98;
-    digest[3] = 0x76543210;
-    digest[4] = 0xf0e1d2c3;
-}
+// /**
+//  * @brief Initialises the digest to the starting values H0, H1, H2, H3, 
+//  * H4 in step 6.
+//  * 
+//  * @param digest A pointer to the digest to be initialised.
+//  */
+// static void init_digest(uint32_t digest[DIGEST_WORD_LENGTH])
+// {
+//     digest[0] = 0x01234567;
+//     digest[1] = 0x89abcdef;
+//     digest[2] = 0xfedcba98;
+//     digest[3] = 0x76543210;
+//     digest[4] = 0xf0e1d2c3;
+// }
 
 
 /**
@@ -238,7 +244,8 @@ void sha1digest(const uint8_t *message,
     size_t num_blocks = buffer_length / WORDS_PER_BLOCK;
 
     uint32_t *digest_words = (uint32_t *) digest_buffer;
-    init_digest(digest_words);
+    
+    // init_digest(digest_words);
 
     size_t i;
 

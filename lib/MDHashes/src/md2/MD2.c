@@ -5,6 +5,10 @@
  * The MD2 hash takes in an arbitrarily long string of bytes and computes a 
  * 128-bit fingerprint value. We follow the description given in RFC 1319:
  * http://www.faqs.org/rfcs/rfc1319.html
+ * The key difference is that we do not initialise the digest buffer to the 
+ * correct values. This makes it more convenient to perform length extension 
+ * attacks but passes the burden of initialisation to the user when computing a 
+ * regular hash.
  * 
  * Note that in contrast to MD4 and MD5, the MD2 hash con only be computed on 
  * strings of bytes, rather than bits.
@@ -169,6 +173,9 @@ void md2digest(const uint8_t *message,
     #endif
 
     uint8_t processed_message[buffer_length];
+
+    // This is where you would initialise digest_buffer to all zeros if we were doing that.
+
     preprocess(message, message_length, processed_message, buffer_length);
 
     #ifdef VERBOSE
