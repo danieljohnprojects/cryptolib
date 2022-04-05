@@ -2,7 +2,7 @@ import pytest
 
 import random
 
-from cryptolib.hashes.SHA1 import sha1digest
+from cryptolib.hashes.SHA1 import sha1digest, sha1extend
 from cryptolib.hashes.MD2 import md2digest
 from cryptolib.hashes.MD4 import md4digest
 from cryptolib.hashes.MD5 import md5digest
@@ -75,3 +75,11 @@ def test_md5digest():
         h = MD5.new(message)
         assert h.digest() == md5digest(message)
 
+def test_sha1extend():
+    # Extend hash of 'abc'
+    original_message = b'abc'
+    original_hash = sha1digest(original_message)
+
+    extensions = [b'abc', b'', b'def', b'abcdefghijklmnopqrstuvwxyz']
+    for ext in extensions:
+        assert sha1extend(original_hash, len(original_message), ext) == sha1digest(b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18' + ext)
