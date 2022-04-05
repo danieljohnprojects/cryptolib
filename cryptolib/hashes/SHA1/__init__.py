@@ -1,0 +1,1 @@
+from .SHA1 import sha1digest, sha1extend
