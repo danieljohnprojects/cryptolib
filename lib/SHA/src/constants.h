@@ -21,3 +21,5 @@
 
 // ROTATE_LEFT rotates the word x n bits to the left.
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
+
+#define MIRROR_32(x) ((((x)&0xff) << 24) | (((x)&0xff00) << 8) | (((x)&0xff0000) >> 8) | (((x)&0xff000000) >> 24))

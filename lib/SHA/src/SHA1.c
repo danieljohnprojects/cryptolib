@@ -84,11 +84,11 @@ static void preprocess(const uint8_t *message,
  */
 static void init_digest(uint32_t digest[DIGEST_WORD_LENGTH])
 {
-    digest[0] = 0x67452301;
-    digest[1] = 0xefcdab89;
-    digest[2] = 0x98badcfe;
-    digest[3] = 0x10325476;
-    digest[4] = 0xc3d2e1f0;
+    digest[0] = 0x01234567;
+    digest[1] = 0x89abcdef;
+    digest[2] = 0xfedcba98;
+    digest[3] = 0x76543210;
+    digest[4] = 0xf0e1d2c3;
 }
 
 
@@ -235,11 +235,16 @@ void sha1digest(const uint8_t *message,
 
     size_t num_blocks = buffer_length / WORDS_PER_BLOCK;
 
-    // uint32_t *digest_words = (uint32_t *) digest_buffer;
-    uint32_t digest_words[DIGEST_LENGTH/4];
+    uint32_t *digest_words = (uint32_t *) digest_buffer;
     init_digest(digest_words);
 
-    for (size_t i = 0; i < num_blocks; i++)
+    size_t i;
+
+    // If you are working on a big-endian machine you should remove this loop.
+    for (i = 0; i < DIGEST_WORD_LENGTH; i++)
+        digest_words[i] = MIRROR_32(digest_words[i]);
+
+    for (i = 0; i < num_blocks; i++)
     {
         #ifdef VERBOSE
             printf("Incorporating block %ld of %ld into digest\n", i, num_blocks);
@@ -247,10 +252,7 @@ void sha1digest(const uint8_t *message,
         process_block(processed_message + WORDS_PER_BLOCK*i, digest_words);
     }
 
-    // Copy the hash back into the original buffer, accounting for endianness bizness
-    for (size_t i = 0; i < DIGEST_LENGTH/4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-            digest_buffer[4*i+j] = (digest_words[i] & (0xff000000 >> (j*8))) >> ((3-j)*8);
-    }
+    // If you are working on a big-endian machine you should remove this loop.
+    for (i = 0; i < DIGEST_WORD_LENGTH; i++)
+        digest_words[i] = MIRROR_32(digest_words[i]);
 }
