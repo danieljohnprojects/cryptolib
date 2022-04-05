@@ -43,7 +43,7 @@ static void init_digest(uint8_t digest[DIGEST_LENGTH])
  * @param out0 The expected first byte of the hash.
  * @param out1 The expected second byte of the hash.
  */
-void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *), 
+void test_hash(void (*hash)(const uint8_t *, size_t, size_t, uint8_t *), 
                const char *test_string,
                uint8_t out0,
                uint8_t out1)
@@ -56,7 +56,8 @@ void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *),
         printf("Computing hash of \"%s\":\n", test_string);
     #endif
 
-    hash((uint8_t *) test_string, message_length, digest_buffer);
+    // Since we are just doing regular hashes (not length extensions) prefix_length is 0
+    hash((uint8_t *) test_string, message_length, 0, digest_buffer);
     
     #ifdef VERBOSE
         printf("\nHash of \"%s\":\n", test_string);
@@ -85,11 +86,11 @@ void test_sha1digest()
 
     test_hash(sha1digest, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 0x84, 0x98);
 
-    char s[1000000 + 1];
-    for (size_t i = 0; i < 1000000; i++)
-        s[i] = 'a';
-    s[1000000] = '\0';
-    test_hash(sha1digest, s, 0x34, 0xaa);
+    // char s[1000000 + 1];
+    // for (size_t i = 0; i < 1000000; i++)
+    //     s[i] = 'a';
+    // s[1000000] = '\0';
+    // test_hash(sha1digest, s, 0x34, 0xaa);
 
     char t[640 + 1];
     for (size_t i = 0; i < 20; i++)
@@ -101,7 +102,47 @@ void test_sha1digest()
     #endif
 }
 
+void test_sha1extend()
+{
+    #ifdef VERBOSE
+        printf("===============================\n");
+        printf("Testing SHA1 length extensions.\n");
+        printf("===============================\n");
+    #endif
+    uint8_t prefix_hash[DIGEST_LENGTH];
+    init_digest(prefix_hash);
+
+    uint8_t message[] = {'a', 'b', 'c'};
+    sha1digest(message, 3, 0, prefix_hash);
+
+    uint8_t extended_hash[DIGEST_LENGTH];
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        extended_hash[i] = prefix_hash[i];
+    
+    sha1digest(message, 3, 3, extended_hash);
+    
+    uint8_t extended_message[64 + 3];
+    for (size_t i = 0; i < 64 + 3; i++)
+        extended_message[i] = 0;
+    extended_message[0] = 'a';
+    extended_message[1] = 'b';
+    extended_message[2] = 'c';
+    extended_message[3] = 0x80;
+    extended_message[63] = 0x18;
+    extended_message[64] = 'a';
+    extended_message[65] = 'b';
+    extended_message[66] = 'c';
+    uint8_t compare_hash[DIGEST_LENGTH];
+    init_digest(compare_hash);
+    sha1digest(extended_message, 64+3, 0, compare_hash);
+
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        assert (compare_hash[i] == extended_hash[i]);
+    printf("SHA1 length extension tests passed!\n");
+}
+
 int main()
 {
     test_sha1digest();
+    test_sha1extend();
 }

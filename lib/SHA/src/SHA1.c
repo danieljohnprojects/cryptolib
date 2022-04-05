@@ -50,11 +50,14 @@ static size_t determine_padded_length(size_t message_length)
  * @param message A pointer to an array of bytes constituting the message. Note 
  * that this is not necesarilly a string so does not need a null terminator.
  * @param message_length The length of the message in bytes.
+ * @param prefix_length The length of the original message  not including any 
+ * padding (0 unless performing a length extension attack).
  * @param buffer A pointer to an array that will store the processed message.
  * @param buffer_length The length of the buffer in 32-bit words.
  */
 static void preprocess(const uint8_t *message, 
                        size_t message_length,
+                       size_t prefix_length,
                        uint32_t *buffer,
                        size_t buffer_length)
 {
@@ -73,7 +76,9 @@ static void preprocess(const uint8_t *message,
     byte_buffer[i] = 0x80;
 
     // Store the bit-length of the message as a bigendian number at the end of the buffer.
-    message_length = message_length * 8;
+    if (prefix_length)
+        prefix_length = 4*determine_padded_length(prefix_length);
+    message_length = (message_length + prefix_length) * 8;
     uint8_t *length_ptr = ((uint8_t *) (buffer + buffer_length)) - 1;
     for (i = 0; i < PAD_BLOCK - PAD_REMAINDER; i++)
     {
@@ -212,15 +217,18 @@ static void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
 
 
 /**
- * @brief Computes the MD5 digest of a message and stores it in the given 
+ * @brief Computes the SHA1 digest of a message and stores it in the given 
  * buffer. 
  * 
  * @param message A string of bytes to digest.
- * @param message_length The length in bytes of the message.
+ * @param message_length The length of the message measured in bytes.
+ * @param prefix_length The length of the original message not including any 
+ * padding (0 unless performing a length extension attack).
  * @param digest_buffer A buffer that will store the resulting digest.
  */
 void sha1digest(const uint8_t *message, 
-               size_t message_length, 
+               size_t message_length,
+               size_t prefix_length,
                uint8_t digest_buffer[DIGEST_LENGTH])
 {
     #ifdef VERBOSE
@@ -232,7 +240,7 @@ void sha1digest(const uint8_t *message,
     #endif
     uint32_t processed_message[buffer_length];
 
-    preprocess(message, message_length, processed_message, buffer_length);
+    preprocess(message, message_length, prefix_length, processed_message, buffer_length);
     #ifdef VERBOSE
         printf("Original message:\n");
         print_bytes(message, message_length);
