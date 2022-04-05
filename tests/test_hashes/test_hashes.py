@@ -24,6 +24,9 @@ def test_sha1digest():
         h = SHA1.new(message)
         assert h.digest() == sha1digest(message)
 
+    with pytest.raises(TypeError):
+        sha1digest('abc')
+
 def test_md2digest():
     rng = random.Random(12345)
 
@@ -83,3 +86,5 @@ def test_sha1extend():
     extensions = [b'abc', b'', b'def', b'abcdefghijklmnopqrstuvwxyz']
     for ext in extensions:
         assert sha1extend(original_hash, len(original_message), ext) == sha1digest(b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18' + ext)
+        with pytest.raises(TypeError):
+            sha1digest(str(ext, 'ascii'))

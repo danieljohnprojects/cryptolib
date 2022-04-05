@@ -14,7 +14,11 @@ def sha1digest(message: bytes) -> bytes:
         message: A string of bytes for which we will compute the hash.
     Returns:
         The 20-byte SHA1 hash.
+    Raises:
+        TypeError: If message is not a byte-like object.
     """
+    if not isinstance(message, (bytes, bytearray)):
+        raise TypeError(f"message must be a byte-like object. Got {type(message)}.")
     digest_buffer = create_string_buffer(init_buffer, len(init_buffer))
     SHA1libC.sha1digest(message, len(message), 0, digest_buffer)
     return digest_buffer.raw
@@ -31,7 +35,10 @@ def sha1extend(prev_hash: bytes, prev_len: int, message: bytes) -> bytes:
         The hash of the original message plus padding with the new message appended.
     Raises:
         ValueError: If prev_hash has the incorrect length.
+        TypeError: If message is not a byte-like object.
     """
+    if not isinstance(message, (bytes, bytearray)):
+        raise TypeError(f"message must be a byte-like object. Got {type(message)}.")
     if len(prev_hash) != len(init_buffer):
         raise ValueError(f"Previous hash must have length {len(init_buffer)}. Got {len(prev_hash)}.")
     digest_buffer = create_string_buffer(prev_hash, len(prev_hash))
