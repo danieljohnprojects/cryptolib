@@ -3,12 +3,14 @@
  * @brief An implementation of the SHA1 hash function. 
  * 
  * The SHA1 hash takes in an arbitrary length message and computes a 160-bit 
- * value. We follow the description given in RFC 3174:
+ * value. We approximately follow the description given in RFC 3174:
  * http://www.faqs.org/rfcs/rfc3174.html
- * Except that we will always assume that messages are strings of bytes, rather
- * than of bits.
+ * We will always assume that messages are strings of bytes, rather than of 
+ * bits.
  * 
- * This code assumes little-endianness.
+ * This code assumes little-endianness, there are two loops that you should 
+ * remove to make it work on a big endian machine, this hasn't been tested 
+ * though.
  */
 
 #include <stdio.h>
