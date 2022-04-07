@@ -47,12 +47,15 @@ static size_t determine_padded_length(size_t message_length)
  * @param message A pointer to an array of bytes constituting the message. Note 
  * that this is not necesarilly a string so does not need a null terminator.
  * @param message_length The length of the message in bytes.
+ * @param prefix_length The length of the original message  not including any 
+ * padding (0 unless performing a length extension attack).
  * @param buffer A pointer to an array that will store the processed 
  * message.
  * @param buffer_length The length of the buffer in 32-bit words.
  */
 static void preprocess(const uint8_t *message, 
                        size_t message_length,
+                       size_t prefix_length,
                        uint32_t *buffer,
                        size_t buffer_length)
 {
@@ -69,7 +72,11 @@ static void preprocess(const uint8_t *message,
     byte_buffer[i] = 0x80;
 
     uint64_t *length_buffer = (uint64_t *) (&(buffer[buffer_length - 2]));
-    *length_buffer = message_length * 8; // Length in *bits*
+
+    if (prefix_length)
+        prefix_length = 4*determine_padded_length(prefix_length);
+
+    *length_buffer = (prefix_length + message_length) * 8; // Length in *bits*
 }
 
 
@@ -198,10 +205,13 @@ static void process_block(const uint32_t message_block[WORDS_PER_BLOCK],
  * 
  * @param message A string of bytes to digest.
  * @param message_length The length in bytes of the message.
+ * @param prefix_length The length of the original message not including any 
+ * padding (0 unless performing a length extension attack).
  * @param digest_buffer A buffer that will store the resulting digest.
  */
 void md4digest(const uint8_t *message, 
-               size_t message_length, 
+               size_t message_length,
+               size_t prefix_length,
                uint8_t digest_buffer[DIGEST_LENGTH])
 {
     #ifdef VERBOSE
@@ -214,7 +224,7 @@ void md4digest(const uint8_t *message,
     #endif
     uint32_t processed_message[buffer_length];
 
-    preprocess(message, message_length, processed_message, buffer_length);
+    preprocess(message, message_length, prefix_length, processed_message, buffer_length);
     #ifdef VERBOSE
         printf("Original message:\n");
         print_bytes(message, message_length);

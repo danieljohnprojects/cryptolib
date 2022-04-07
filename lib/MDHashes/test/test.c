@@ -114,6 +114,10 @@ void test_MD2digest()
 }
 
 
+void do_md4(const uint8_t *message, size_t message_length, uint8_t digest_buffer[DIGEST_LENGTH])
+{
+    md4digest(message, message_length, 0, digest_buffer);
+}
 void test_MD4digest()
 {
     #ifdef VERBOSE
@@ -121,19 +125,23 @@ void test_MD4digest()
         printf("Testing MD4 hash.\n");
         printf("=================\n");
     #endif
-    test_hash(md4digest, init_md4, "", 0x31, 0xd6);
-    test_hash(md4digest, init_md4, "a", 0xbd, 0xe5);
-    test_hash(md4digest, init_md4, "abc", 0xa4, 0x48);
-    test_hash(md4digest, init_md4, "message digest", 0xd9, 0x13);
-    test_hash(md4digest, init_md4, "abcdefghijklmnopqrstuvwxyz", 0xd7, 0x9e);
-    test_hash(md4digest, init_md4, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0x04, 0x3f);
-    test_hash(md4digest, init_md4, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0xe3, 0x3b);
+    test_hash(do_md4, init_md4, "", 0x31, 0xd6);
+    test_hash(do_md4, init_md4, "a", 0xbd, 0xe5);
+    test_hash(do_md4, init_md4, "abc", 0xa4, 0x48);
+    test_hash(do_md4, init_md4, "message digest", 0xd9, 0x13);
+    test_hash(do_md4, init_md4, "abcdefghijklmnopqrstuvwxyz", 0xd7, 0x9e);
+    test_hash(do_md4, init_md4, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0x04, 0x3f);
+    test_hash(do_md4, init_md4, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0xe3, 0x3b);
     #ifdef VERBOSE
         printf("MD4 tests passed!!\n\n");
     #endif
 }
 
 
+void do_md5(const uint8_t *message, size_t message_length, uint8_t digest_buffer[DIGEST_LENGTH])
+{
+    md5digest(message, message_length, 0, digest_buffer);
+}
 void test_MD5digest()
 {
     #ifdef VERBOSE
@@ -141,16 +149,98 @@ void test_MD5digest()
         printf("Testing MD5 hash.\n");
         printf("=================\n");
     #endif
-    test_hash(md5digest, init_md5, "", 0xd4, 0x1d);
-    test_hash(md5digest, init_md5, "a", 0x0c, 0xc1);
-    test_hash(md5digest, init_md5, "abc", 0x90, 0x01);
-    test_hash(md5digest, init_md5, "message digest", 0xf9, 0x6b);
-    test_hash(md5digest, init_md5, "abcdefghijklmnopqrstuvwxyz", 0xc3, 0xfc);
-    test_hash(md5digest, init_md5, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0xd1, 0x74);
-    test_hash(md5digest, init_md5, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0x57, 0xed);
+    test_hash(do_md5, init_md5, "", 0xd4, 0x1d);
+    test_hash(do_md5, init_md5, "a", 0x0c, 0xc1);
+    test_hash(do_md5, init_md5, "abc", 0x90, 0x01);
+    test_hash(do_md5, init_md5, "message digest", 0xf9, 0x6b);
+    test_hash(do_md5, init_md5, "abcdefghijklmnopqrstuvwxyz", 0xc3, 0xfc);
+    test_hash(do_md5, init_md5, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 0xd1, 0x74);
+    test_hash(do_md5, init_md5, "12345678901234567890123456789012345678901234567890123456789012345678901234567890", 0x57, 0xed);
     #ifdef VERBOSE
         printf("MD5 tests passed!!\n\n");
     #endif
+}
+
+
+void test_MD4extend()
+{
+    #ifdef VERBOSE
+        printf("==============================\n");
+        printf("Testing MD4 length extensions.\n");
+        printf("==============================\n");
+    #endif
+
+    uint8_t prefix_hash[DIGEST_LENGTH];
+    init_md5(prefix_hash);
+
+    uint8_t message[] = {'a', 'b', 'c'};
+    md4digest(message, 3, 0, prefix_hash);
+
+    uint8_t extended_hash[DIGEST_LENGTH];
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        extended_hash[i] = prefix_hash[i];
+    
+    md4digest(message, 3, 3, extended_hash);
+
+    uint8_t extended_message[64 + 3];
+    for (size_t i = 0; i < 64 + 3; i++)
+        extended_message[i] = 0;
+    extended_message[0] = 'a';
+    extended_message[1] = 'b';
+    extended_message[2] = 'c';
+    extended_message[3] = 0x80;
+    extended_message[56] = 0x18;
+    extended_message[64] = 'a';
+    extended_message[65] = 'b';
+    extended_message[66] = 'c';
+    uint8_t compare_hash[DIGEST_LENGTH];
+    init_md5(compare_hash);
+    md4digest(extended_message, 64+3, 0, compare_hash);
+
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        assert (compare_hash[i] == extended_hash[i]);
+    printf("MD4 length extension tests passed!\n\n");
+}
+
+
+void test_MD5extend()
+{
+    #ifdef VERBOSE
+        printf("==============================\n");
+        printf("Testing MD5 length extensions.\n");
+        printf("==============================\n");
+    #endif
+
+    uint8_t prefix_hash[DIGEST_LENGTH];
+    init_md5(prefix_hash);
+
+    uint8_t message[] = {'a', 'b', 'c'};
+    md5digest(message, 3, 0, prefix_hash);
+
+    uint8_t extended_hash[DIGEST_LENGTH];
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        extended_hash[i] = prefix_hash[i];
+    
+    md5digest(message, 3, 3, extended_hash);
+
+    uint8_t extended_message[64 + 3];
+    for (size_t i = 0; i < 64 + 3; i++)
+        extended_message[i] = 0;
+    extended_message[0] = 'a';
+    extended_message[1] = 'b';
+    extended_message[2] = 'c';
+    extended_message[3] = 0x80;
+    extended_message[56] = 0x18;
+    extended_message[64] = 'a';
+    extended_message[65] = 'b';
+    extended_message[66] = 'c';
+    uint8_t compare_hash[DIGEST_LENGTH];
+    init_md5(compare_hash);
+    md5digest(extended_message, 64+3, 0, compare_hash);
+
+    for (size_t i = 0; i < DIGEST_LENGTH; i++)
+        assert (compare_hash[i] == extended_hash[i]);
+    printf("MD5 length extension tests passed!\n\n");
 }
 
 
@@ -159,6 +249,10 @@ void test_md_hashes()
     test_MD2digest();
     test_MD4digest();
     test_MD5digest();
+
+    test_MD4extend();
+    test_MD5extend();
+
     #ifdef VERBOSE
         printf("All tests passed!!\n\n");
     #endif
