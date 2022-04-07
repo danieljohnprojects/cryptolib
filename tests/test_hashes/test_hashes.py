@@ -4,8 +4,8 @@ import random
 
 from cryptolib.hashes.SHA1 import sha1digest, sha1extend
 from cryptolib.hashes.MD2 import md2digest
-from cryptolib.hashes.MD4 import md4digest
-from cryptolib.hashes.MD5 import md5digest
+from cryptolib.hashes.MD4 import md4digest, md4extend
+from cryptolib.hashes.MD5 import md5digest, md5extend
 from Crypto.Hash import SHA1, MD2, MD4, MD5
 
 def test_sha1digest():
@@ -88,3 +88,25 @@ def test_sha1extend():
         assert sha1extend(original_hash, len(original_message), ext) == sha1digest(b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18' + ext)
         with pytest.raises(TypeError):
             sha1digest(str(ext, 'ascii'))
+            
+def test_md4extend():
+    # Extend hash of 'abc'
+    original_message = b'abc'
+    original_hash = md4digest(original_message)
+
+    extensions = [b'abc', b'', b'def', b'abcdefghijklmnopqrstuvwxyz']
+    for ext in extensions:
+        assert md4extend(original_hash, len(original_message), ext) == md4digest(b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00' + ext)
+        with pytest.raises(TypeError):
+            md4digest(str(ext, 'ascii'))
+            
+def test_md5extend():
+    # Extend hash of 'abc'
+    original_message = b'abc'
+    original_hash = md5digest(original_message)
+
+    extensions = [b'abc', b'', b'def', b'abcdefghijklmnopqrstuvwxyz']
+    for ext in extensions:
+        assert md5extend(original_hash, len(original_message), ext) == md5digest(b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00' + ext)
+        with pytest.raises(TypeError):
+            md5digest(str(ext, 'ascii'))

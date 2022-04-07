@@ -1,0 +1,1 @@
+from .MD4 import md4digest, md4extend
