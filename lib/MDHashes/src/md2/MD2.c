@@ -6,9 +6,14 @@
  * 128-bit fingerprint value. We follow the description given in RFC 1319:
  * http://www.faqs.org/rfcs/rfc1319.html
  * The key difference is that we do not initialise the digest buffer to the 
- * correct values. This makes it more convenient to perform length extension 
- * attacks but passes the burden of initialisation to the user when computing a 
- * regular hash.
+ * correct values. 
+ * 
+ * Interestingly MD2 is far more resistant to length extension attacks than 
+ * MD4, MD5, and even SHA1. This is because a checksum is appended to each 
+ * message before the hash is computed. Without knowledge of a message it is 
+ * not easy to determine what checksum should be appended to the end of a new 
+ * message. With this in mind we do not make any specific provisions in the API 
+ * for length extension attacks. 
  * 
  * Note that in contrast to MD4 and MD5, the MD2 hash con only be computed on 
  * strings of bytes, rather than bits.
