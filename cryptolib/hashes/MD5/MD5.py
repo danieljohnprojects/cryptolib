@@ -1,7 +1,7 @@
 from ctypes import *
 from ...utils.files import build_filename
 
-libpath = build_filename('build/MDHashes/libMD5.so')
+libpath = build_filename('build/lib/MDHashes/libMD5.so')
 MD5libC = CDLL(libpath)
 init_buffer = bytes.fromhex("0123456789abcdeffedcba9876543210")
 

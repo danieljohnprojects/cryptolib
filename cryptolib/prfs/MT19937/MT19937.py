@@ -19,7 +19,7 @@ class MT19937(RNGEngine):
     state_array_length = 624    # Number of elements in the state array
 
     # Import the C functions for the Mersenne Twister
-    libpath = build_filename('build/MersenneTwister/libMT19937.so')
+    libpath = build_filename('build/lib/MersenneTwister/libMT19937.so')
     _MTlibC = CDLL(libpath)
     # Set the proper types for the functions
     _StateArrayType = c_uint32 * state_array_length

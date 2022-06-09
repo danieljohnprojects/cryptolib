@@ -14,9 +14,9 @@ class AES(BCEngine):
     """
 
     block_size = 16
-    libpath128 = build_filename('build/AES/libaes128.so')
-    libpath192 = build_filename('build/AES/libaes192.so')
-    libpath256 = build_filename('build/AES/libaes256.so')
+    libpath128 = build_filename('build/lib/AES/libaes128.so')
+    libpath192 = build_filename('build/lib/AES/libaes192.so')
+    libpath256 = build_filename('build/lib/AES/libaes256.so')
     AES128libC = CDLL(libpath128)
     AES192libC = CDLL(libpath192)
     AES256libC = CDLL(libpath256)

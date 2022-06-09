@@ -1,7 +1,7 @@
 from ctypes import *
 from ...utils.files import build_filename
 
-libpath = build_filename('build/SHA/libSHA1.so')
+libpath = build_filename('build/lib/SHA/libSHA1.so')
 SHA1libC = CDLL(libpath)
 init_buffer = bytes.fromhex('67452301efcdab8998badcfe10325476c3d2e1f0')
 

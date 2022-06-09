@@ -1,7 +1,7 @@
 from ctypes import *
 from ...utils.files import build_filename
 
-libpath = build_filename('build/MDHashes/libMD2.so')
+libpath = build_filename('build/lib/MDHashes/libMD2.so')
 MD2libC = CDLL(libpath)
 init_buffer = bytes(16)
 
