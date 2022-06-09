@@ -21,7 +21,7 @@ def fermat_test(p: int, samples: int = 100, seed: Optional[int] = None) -> bool:
         return all(A)
     rng = random.Random(seed)
     # A = rng.sample(range(2, p), samples) # This doesn't work for very large p
-    A = [rng.randint(2, p) for _ in range(samples)]
+    A = [rng.randint(2, p-1) for _ in range(samples)]
     A = [pow(a, p-1, p) == 1 for a in A]
     return all(A)
 
