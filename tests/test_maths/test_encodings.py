@@ -1,13 +1,5 @@
 import pytest
-from cryptolib.utils.math import encode_as_combination, xgcd
-
-def test_xgcd():
-    gcd, x, y = xgcd(48, 69)
-    assert(gcd == 3)
-    assert(x*48 + y*69 == gcd)
-    gcd, x, y = xgcd(69, 48)
-    assert(gcd == 3)
-    assert(x*69 + y*48 == gcd)
+from cryptolib.maths.encoding import encode_as_combination, decode_combination, numberToBase
 
 def test_encode_as_combination():
     # x out of bounds
