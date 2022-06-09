@@ -72,3 +72,5 @@ def sqrt_modulo(x: int, p: int) -> int:
     c = z**q
     t = x**q
     R = x**((q+1)//2)
+    
+    raise NotImplementedError
