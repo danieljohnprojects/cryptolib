@@ -2,6 +2,7 @@
 Functions for generating and testing primes.
 """
 import random
+from math import ceil, floor
 from typing import Optional
 
 def fermat_test(p: int, samples: int = 100, seed: Optional[int] = None) -> bool:
@@ -68,3 +69,23 @@ def miller_rabin_test(p: int, samples: int = 100, seed: Optional[int] = None) ->
             else:
                 return False # If we get to the end we have a non-trivial square-root of 1.
     return True
+
+def generatePrime(nBits: float, seed: Optional[int] = None) -> int:
+    """
+    Generates a number with the specified bit-length that is likely to be a 
+    prime. No other properties should be assumed, in particular it may be the 
+    case that the prime is not suited for cryptographic applications.
+    
+    Args:
+        nBits (float): The number of bits of the desired number.
+        seed (Optional[int]): The seed used to generate the number.
+    Returns:
+        int: A number which is very likely to be prime and of the desired magnitude.
+    """
+    if nBits <= 0:
+        raise ValueError(f"Argument nBits must be positive. Got {nBits}.")
+    rng = random.Random(seed)
+    testNum = rng.randint(max(1,floor(2**(nBits-0.1))), ceil(2**(nBits+0.1)))
+    while not miller_rabin_test(testNum):
+        testNum += 1
+    return testNum
