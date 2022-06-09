@@ -24,3 +24,47 @@ def fermat_test(p: int, samples: int = 100, seed: Optional[int] = None) -> bool:
     A = [rng.randint(2, p) for _ in range(samples)]
     A = [pow(a, p-1, p) == 1 for a in A]
     return all(A)
+
+def miller_rabin_test(p: int, samples: int = 100, seed: Optional[int] = None) -> bool:
+    """
+    A number p is prime if and only if the only numbers that square to 1 mod p are 1 and -1. This test
+    uses that fact to determine if a number is composite. A number passes the Miller-Rabin test if we 
+    do not find a non-trivial square root of 1.
+
+    Args:
+        p (int): The candidate prime
+        samples (int, optional): The number of samples to perform the test with. Defaults to 100.
+        seed (Optional[int], optional): The seed given to the rng. Defaults to None.
+
+    Returns:
+        bool: True if p passes the test, False if it is definitely composite.
+    """
+    assert p > 0
+    # Handle annoying edge cases here
+    if p == 1:
+        return False
+    if p == 2:
+        return True
+    
+    q = p-1
+    s = 0
+    while (q % 2 == 0) and (q > 0):
+        s += 1
+        q = q // 2
+    
+    rng = random.Random(seed)
+    
+    for _ in range(samples):
+        a = rng.randint(2, p-1)
+        if pow(a, p-1, p) != 1:
+            return False
+        
+        if pow(a, q, p) == 1:
+            pass
+        else:
+            for i in range(s):
+                if pow(a, q*2**i, p) == p-1:
+                    break # We've found a trivial square-root of 1
+            else:
+                return False # If we get to the end we have a non-trivial square-root of 1.
+    return True
