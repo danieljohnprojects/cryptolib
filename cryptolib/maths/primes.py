@@ -2,8 +2,10 @@
 Functions for generating and testing primes.
 """
 import random
-from math import ceil, floor
+from math import ceil, floor, gcd, prod
 from typing import Optional
+
+from .smallPrimes import primeList
 
 def fermat_test(p: int, samples: int = 100, seed: Optional[int] = None) -> bool:
     """
@@ -89,3 +91,142 @@ def generatePrime(nBits: float, seed: Optional[int] = None) -> int:
     while not miller_rabin_test(testNum):
         testNum += 1
     return testNum
+
+def pollardRho(N: int, maxSteps: int = 1000000) -> int:
+    """
+    Attempts to find factors of N using Pollard's Rho algorithm. The idea of 
+    this algorithm is to construct a sequence of numbers (x_k) by iterating the
+    following function:
+    g(x) = x*x + 1 (mod N).
+    Suppose p is a number dividing N. There is an induced sequence (y_k) given 
+    by:
+    y_k = x_k (mod p)
+    that we cannot directly observe.
+    Now consider what happens when (y_k) cycles. Suppose y_j = y_k for some j 
+    and k. Then x_j - x_k is a multiple of p. In particular, this number shares 
+    a factor with N. We can find the common factor by taking the gcd.    
+
+    Args:
+        N (int): The number to be factored.
+        maxSteps (int, optional): The maximum number of steps taken in the 
+            cycle finding process. Defaults to 1000000.
+
+    Returns:
+        int: The divisor found by the algorithm.
+    """
+    g = lambda x: (pow(x, 2, N) + 1) % N
+    
+    startingPoint = 2
+    
+    tortoise = startingPoint
+    hare = startingPoint
+    d = 1
+    while d==1 and maxSteps > 0:
+        maxSteps -= 1
+        tortoise = g(tortoise) # Single step
+        hare = g(g(hare)) # Double step
+        d = gcd(abs(tortoise-hare), N) # Check for a collision in the induced sequence.
+    return d
+    
+def pollardP_1(N: int) -> int:
+    """
+    Attempts to find a factor of N using Pollard's p-1 algorithm. Suppose p 
+    divides N, then for any a coprime to p we have 
+    a^(p-1) = 1 (mod p). 
+    In fact for any K we have 
+    a^(K*(p-1)) = 1 (mod p).
+    Suppose we take M a number with many small prime factors, then if p-1 is 
+    small enough it probably divides M. In this case we have
+    a^M = 1 (mod p)
+    meaning
+    p|(a^M - 1).
+    Thus a^M - 1 shares a divisor with N, so we can take the gcd to find it.
+
+    Note that this particular implementation will ignore powers of 2 that 
+    divide N.
+
+    Args:
+        N (int): The number to be factored.
+
+    Returns:
+        int: A number that divides N. 
+    """
+    if not isinstance(N, int):
+        raise ValueError(f"N must be a positive integer. Got {N}.")
+    if N == 1:
+        return 1
+    if N < 1:
+        raise ValueError(f"N must be a positive integer. Got {N}.")
+    
+    # First replace N with an odd number dividing N
+    while N%2 == 0:
+        N //= 2
+    
+    # Construct a number with lots of small prime factors
+    M = 1
+    smoothnessBound = primeList[-1] + 1
+    for p in primeList:
+        P = p
+        while P < smoothnessBound:
+            M *= p
+            P *= p
+    
+    a = 2
+    i = -1
+    while (d:=gcd(pow(a, M, N) - 1, N)) == N:
+        M //= primeList[i]
+        i -= 1
+    
+    return d
+
+def factorise(N: int) -> list[int]:
+    """
+    Compute a factorisation of the given input. The factorisation is not 
+    guaranteed to be complete.
+
+    Args:
+        N (int): The number to be factored.
+
+    Returns:
+        list[int]: The factors.
+    """
+    if N == 1 or miller_rabin_test(N):
+        return [N]
+    
+    factors = []
+    # First get rid of all the smallest factors
+    # print("Attempting trial division for small primes.")
+    for p in primeList:
+        while N % p == 0:
+            N //= p
+            factors.append(p)
+    
+    # Now try Pollard's p-1 as many times as gets us somewhere.
+    p = pollardP_1(N)
+    if p != 1:
+        newFactors = factorise(p)
+        N //= prod(newFactors)
+        factors += newFactors
+    
+    # Don't bother with Pollard's rho unless we need to.
+    if N == 1:
+        return sorted(factors)
+    if miller_rabin_test(N):
+        return sorted(factors + [N])
+    
+    # Now try Pollard's-rho
+    while N != 1:
+        p = pollardRho(N)
+        if p == 1 or p == N:
+            break
+        else:
+            while N%p == 0:
+                N //= p
+                factors.append(p)
+    
+    # Give up on factoring if we haven't figured it out yet.
+    if N != 1:
+        factors.append(N)
+        
+    return sorted(factors)
+    

@@ -1,6 +1,6 @@
 import pytest
 import random
-from cryptolib.maths.primes import fermat_test, miller_rabin_test
+from cryptolib.maths.primes import factorise, fermat_test, generatePrime, miller_rabin_test
 
 def test_fermat_test():
     seed = 12345
@@ -35,3 +35,15 @@ def test_miller_rabin_test():
         assert not miller_rabin_test(p, seed=seed)
         
     #TODO Find a composite that fools the Miller-Rabin test.
+    
+def test_factorise():
+    # seed = 12345
+    # p = generatePrime(128, seed=seed)
+    p = 340484563128503304223833324170966481637
+    assert factorise(p-1) == [2,2,3,7,11,19,3413,9029,629355327997567858704696253]
+    assert factorise(p+1) == [2, 13, 37, 211, 487, 4783, 358441, 6576833369, 305475256601]
+    # seed = 1234
+    # p = generatePrime(128, seed=seed)
+    p = 327435217573504622653930443244843925453
+    assert factorise(p-2) == [3, 3049, 35797006403575447977908652371798833]
+    assert factorise(p+1) == [2, 3, 2592683963, 4678296053, 4499216122741530331]
