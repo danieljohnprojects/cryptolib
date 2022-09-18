@@ -1,6 +1,6 @@
 import pytest
 import random
-from cryptolib.maths.primes import factorise, fermat_test, generatePrime, miller_rabin_test
+from cryptolib.maths.primes import factorise, fermat_test, generatePrime, miller_rabin_test, pollardP_1
 
 def test_fermat_test():
     seed = 12345
@@ -35,6 +35,12 @@ def test_miller_rabin_test():
         assert not miller_rabin_test(p, seed=seed)
         
     #TODO Find a composite that fools the Miller-Rabin test.
+    
+def test_pollardP_1():
+    n = 30
+    assert n % pollardP_1(n) == 0
+    n = 155383
+    assert n % pollardP_1(n) == 0
     
 def test_factorise():
     # seed = 12345
