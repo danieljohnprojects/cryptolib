@@ -171,12 +171,18 @@ def pollardP_1(N: int) -> int:
             M *= p
             P *= p
     
+    # Attempt to find a factor of N
     a = 2
-    i = -1
-    while (d:=gcd(pow(a, M, N) - 1, N)) == N:
-        M //= primeList[i]
-        i -= 1
-    
+    d = gcd(pow(a, M, N) - 1, N)
+
+    # If d==N it means all prime factors p of N have that p-1 is divisible by small primes.
+    # In this case we must decrease our smoothness bound.
+    for p in primeList[::-1]:
+        while d == N and M%p == 0:
+            M //= p
+            d = gcd(pow(a, M, N) - 1, N)
+        if d != N:
+            break
     return d
 
 def factorise(N: int) -> list[int]:
@@ -200,6 +206,11 @@ def factorise(N: int) -> list[int]:
         while N % p == 0:
             N //= p
             factors.append(p)
+    
+    if N == 1:
+        return sorted(factors)
+    if miller_rabin_test(N):
+        return sorted(factors + [N])
     
     # Now try Pollard's p-1 as many times as gets us somewhere.
     p = pollardP_1(N)
