@@ -1,1 +1,1 @@
-from .MD4 import md4digest, md4extend
+from .MD4 import md4digest, md4extend, md4extend_message

@@ -29,7 +29,7 @@ def sha1extend(prev_hash: bytes, prev_len: int, message: bytes) -> bytes:
 
     Args:
         prev_hash: The SHA1 hash of a message. Nothing about the original message itself need be known except for its length.
-        prev_len: The length of the original message.
+        prev_len: The length of the original message (in bytes).
         message: The message to append to the original message (plus padding).
     Returns:
         The hash of the original message plus padding with the new message appended.
@@ -44,3 +44,20 @@ def sha1extend(prev_hash: bytes, prev_len: int, message: bytes) -> bytes:
     digest_buffer = create_string_buffer(prev_hash, len(prev_hash))
     SHA1libC.sha1digest(message, len(message), prev_len, digest_buffer)
     return digest_buffer.raw
+
+def sha1extend_message(prefix_len: int, message: bytes, suffix: bytes) -> bytes:
+    """
+    Construct a length extended message that could for example pass a prefix MAC verification check.
+    
+    Args:
+        prefix_len: The length of the unknown prefix that is added by a prefix MAC signing oracle.
+        message: The message corresponding to the original MAC.
+        suffix: A suffix to add on to the extended message.
+    Returns:
+        A message that should pass a prefix MAC verification oracle (the corresponding MAC can be calculated with the sha1extend function). 
+    """
+    original_message_len = prefix_len + len(message)
+    pad_len = (56 - original_message_len) % 64
+    padding = b'\x80' + b'\x00' * (pad_len-1)
+    length_block = (8*original_message_len).to_bytes(8, 'big') # length in *bits*
+    return message + padding + length_block + suffix

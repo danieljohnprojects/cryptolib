@@ -1,1 +1,1 @@
-from .SHA1 import sha1digest, sha1extend
+from .SHA1 import sha1digest, sha1extend, sha1extend_message
