@@ -1,10 +1,11 @@
+from cryptolib.hashes.SHA1 import sha1extend, sha1extend_message
+from cryptolib.hashes.MD4 import md4extend, md4extend_message
 from cryptolib.utils.byteops import block_xor, reconstruct_from_str
-from .data import challenge25, challenge26, challenge27
-
+from .data import challenge25, challenge26, challenge27, challenge28, challenge30
 
 def test_challenge25():
     """
-     Back to CTR. Encrypt the recovered plaintext from this file (the ECB exercise) under CTR with a random key (for this exercise the key should be unknown to you, but hold on to it).
+    Back to CTR. Encrypt the recovered plaintext from this file (the ECB exercise) under CTR with a random key (for this exercise the key should be unknown to you, but hold on to it).
 
     Now, write the code that allows you to "seek" into the ciphertext, decrypt, and re-encrypt with different plaintext. Expose this as a function, like, "edit(ciphertext, key, offset, newtext)".
 
@@ -77,11 +78,50 @@ def test_challenge27():
     try:
         # Add full ciphertext on the end so that padding works out.
         server(ciphertext[:16] + b'\x00'*16 + ciphertext) 
-    except ValueError as verr:
-        errormessage = verr.args[0]
+    except ValueError as vErr:
+        errorMessage = vErr.args[0]
     prefix_len = len("Message ")
     suffix_len = len(" contains non-ascii characters!")
-    plain = reconstruct_from_str(errormessage[prefix_len:-suffix_len])
+    plain = reconstruct_from_str(errorMessage[prefix_len:-suffix_len])
     key = block_xor(plain[:16], plain[32:48])
     assert key == client._engine._key_schedule[:16]
+
+def test_challenge28():
+    """
+    Find a SHA-1 implementation in the language you code in.
+    Don't cheat. It won't work.
+    Do not use the SHA-1 implementation your language already provides (for instance, don't use the "Digest" library in Ruby, or call OpenSSL; in Ruby, you'd want a pure-Ruby SHA-1).
+
+    Write a function to authenticate a message under a secret key by using a secret-prefix MAC, which is simply:
+
+    SHA1(key || message)
+
+    Verify that you cannot tamper with the message without breaking the MAC you've produced, and that you can't produce a new MAC without knowing the secret key.
+    """
     
+    message = b'will this be authenticated?'
+    sign, verify = challenge28.construct_signer_verifier(key_length=16)
+    mac = sign(message)
+    assert verify(message, mac)
+    altered_message = block_xor(message, b'\x01'*len(message))
+    assert not verify(altered_message, mac)
+
+def test_challenge29():
+    key_len = 16
+    sign, verify = challenge28.construct_signer_verifier(key_len)
+    message = b'comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon'
+    mac = sign(message)
+    suffix = b';admin=true'
+    new_mac = sha1extend(mac, len(message) + key_len, suffix)
+    new_message = sha1extend_message(key_len, message, suffix)
+    assert verify(new_message, new_mac)
+
+def test_challenge30():
+    key_len = 16
+    sign, verify = challenge30.construct_signer_verifier(key_len)
+    message = b'comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon'
+    mac = sign(message)
+    suffix = b';admin=true'
+    new_mac = md4extend(mac, len(message) + key_len, suffix)
+    new_message = md4extend_message(key_len, message, suffix)
+    assert verify(new_message, new_mac)
