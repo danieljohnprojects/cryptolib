@@ -6,6 +6,7 @@ from cryptolib.hashes.SHA1 import sha1digest, sha1extend, sha1extend_message
 from cryptolib.hashes.MD2 import md2digest
 from cryptolib.hashes.MD4 import md4digest, md4extend, md4extend_message
 from cryptolib.hashes.MD5 import md5digest, md5extend, md5extend_message
+from cryptolib.hashes.MAC import prefixMAC, HMAC
 from Crypto.Hash import SHA1, MD2, MD4, MD5
 
 def test_sha1digest():
@@ -131,3 +132,16 @@ def test_md5extend_message():
     assert md5extend_message(0, original_message, b'') == padded_message
     padded_message = b'abc\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00'
     assert md5extend_message(1, original_message, b'') == padded_message
+
+def test_MACs():
+    rng = random.Random(12345)
+    
+    sign, verify = prefixMAC(sha1digest, rng.randbytes(16))
+    messages = [b'', b'a', b'hello', b'a'*1000]
+    for message in messages:
+        mac = sign(message)
+        assert verify(message, mac)
+        assert not verify(message, b'')
+        assert not verify(message, b'a')
+        assert not verify(message, bytes(len(sha1digest(b''))))
+        
