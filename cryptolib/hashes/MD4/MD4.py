@@ -54,7 +54,7 @@ def md4extend_message(prefix_len: int, message: bytes, suffix: bytes) -> bytes:
         message: The message corresponding to the original MAC.
         suffix: A suffix to add on to the extended message.
     Returns:
-        A message that should pass a prefix MAC verification oracle (the corresponding MAC can be calculated with the sha1extend function). 
+        A message that should pass a prefix MAC verification oracle (the corresponding MAC can be calculated with the md4extend function). 
     """
     original_message_len = prefix_len + len(message)
     pad_len = (56 - original_message_len) % 64
