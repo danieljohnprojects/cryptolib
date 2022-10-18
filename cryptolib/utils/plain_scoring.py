@@ -1,9 +1,7 @@
 """
 Functions for scoring plaintext decryptions.
 """
-from cgitb import small
 from functools import reduce
-from pydoc import plain
 from string import printable
 import re
 
@@ -159,13 +157,13 @@ class CTFFlagScorer(LeetScorer):
         large_penalty = 5000
 
         # The last six characters in string.printable are whitespace characters
-        goodchars = [chr(c) in printable[:-6] for c in plaintext]
+        good_chars = [chr(c) in printable[:-6] for c in plaintext]
 
-        if (num_bad_chars := goodchars.count(False)):
+        if (num_bad_chars := good_chars.count(False)):
             # There are some characters here that don't belong.
             score += small_penalty * num_bad_chars
             # Remove bad characters
-            plaintext = reduce(str.__add__, [chr(c) if isGood else '' for c, isGood in zip(plaintext, goodchars)])
+            plaintext = reduce(str.__add__, [chr(c) if isGood else '' for c, isGood in zip(plaintext, good_chars)])
         else:
             plaintext = str(plaintext, 'ascii')
 
