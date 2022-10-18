@@ -4,7 +4,8 @@ from cryptolib.hashes.SHA1 import sha1digest, sha1extend, sha1extend_message
 from cryptolib.hashes.MD4 import md4digest, md4extend, md4extend_message
 from cryptolib.hashes.MAC import prefixMAC, HMAC
 from cryptolib.utils.byteops import block_xor, reconstruct_from_str
-from .data import challenge25, challenge26, challenge27, challenge28, challenge30
+from .data import challenge25, challenge26, challenge27, challenge31
+from multiprocessing import Pool
 
 def test_challenge25():
     """
@@ -128,3 +129,33 @@ def test_challenge30():
     new_mac = md4extend(mac, len(message) + key_len, suffix)
     new_message = md4extend_message(key_len, message, suffix)
     assert verify(new_message, new_mac)
+
+def test_challenge31():
+    # _, verify = HMAC(sha1digest, secrets.token_bytes(key_len), sleep_time=0.01)
+    verify = challenge31.verify
+    message = challenge31.message
+    mac_len = challenge31.mac_len
+    # mac = challenge31.sign(message)
+    signature = bytearray(mac_len)
+    eps = challenge31.sleep_time / 5
+    for i in range(mac_len):
+        max_time = 0
+        max_ind = -1
+        putative_sigs = [signature.copy() for _ in range(256)]
+        for b, sig in enumerate(putative_sigs):
+            sig[i] = b
+        count = 0
+        while max_ind < 0:
+            if count > 10:
+                assert False
+            with Pool() as p:
+                times = p.map(challenge31.time_to_verify, putative_sigs)
+            max_time = max(times)
+            for t in times:
+                if t != max_time and max_time - t < eps:
+                    count += 1
+                    continue # Times were too close to call, try again.
+            max_ind = times.index(max_time)
+        signature[i] = max_ind
+        # assert signature[i] == mac[i]
+    assert verify(message, signature)
