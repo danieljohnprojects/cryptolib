@@ -1,5 +1,8 @@
-from cryptolib.hashes.SHA1 import sha1extend, sha1extend_message
-from cryptolib.hashes.MD4 import md4extend, md4extend_message
+import secrets
+import time
+from cryptolib.hashes.SHA1 import sha1digest, sha1extend, sha1extend_message
+from cryptolib.hashes.MD4 import md4digest, md4extend, md4extend_message
+from cryptolib.hashes.MAC import prefixMAC, HMAC
 from cryptolib.utils.byteops import block_xor, reconstruct_from_str
 from .data import challenge25, challenge26, challenge27, challenge28, challenge30
 
@@ -100,7 +103,7 @@ def test_challenge28():
     """
     
     message = b'will this be authenticated?'
-    sign, verify = challenge28.construct_signer_verifier(key_length=16)
+    sign, verify = prefixMAC(sha1digest, secrets.token_bytes(16))
     mac = sign(message)
     assert verify(message, mac)
     altered_message = block_xor(message, b'\x01'*len(message))
@@ -108,7 +111,7 @@ def test_challenge28():
 
 def test_challenge29():
     key_len = 16
-    sign, verify = challenge28.construct_signer_verifier(key_len)
+    sign, verify = prefixMAC(sha1digest, secrets.token_bytes(key_len))
     message = b'comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon'
     mac = sign(message)
     suffix = b';admin=true'
@@ -118,7 +121,7 @@ def test_challenge29():
 
 def test_challenge30():
     key_len = 16
-    sign, verify = challenge30.construct_signer_verifier(key_len)
+    sign, verify = prefixMAC(md4digest, secrets.token_bytes(key_len))
     message = b'comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon'
     mac = sign(message)
     suffix = b';admin=true'
