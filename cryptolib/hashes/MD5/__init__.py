@@ -1,1 +1,1 @@
-from .MD5 import md5digest, md5extend
+from .MD5 import md5digest, md5extend, md5extend_message
