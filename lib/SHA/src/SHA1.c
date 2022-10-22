@@ -31,7 +31,7 @@
  * given length (in bytes), plus padding and the representation of the message 
  * length.
  * 
- * @param message_length The length of the unpadded message in butes.
+ * @param message_length The length of the unpadded message in bytes.
  * @return The length of the corresponding buffer in words.
  */
 static size_t determine_padded_length(size_t message_length)
@@ -48,7 +48,7 @@ static size_t determine_padded_length(size_t message_length)
  * Fills a buffer with the given message and the appropriate padding.
  * 
  * @param message A pointer to an array of bytes constituting the message. Note 
- * that this is not necesarilly a string so does not need a null terminator.
+ * that this is not necessarily a string so does not need a null terminator.
  * @param message_length The length of the message in bytes.
  * @param prefix_length The length of the original message  not including any 
  * padding (0 unless performing a length extension attack).
