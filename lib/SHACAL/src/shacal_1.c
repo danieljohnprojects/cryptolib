@@ -1,9 +1,14 @@
 /**
  * @file SHACAL_1_encr.c
  * @author Daniel John (daniel.john.projects@gmail.com)
- * @brief 
+ * @brief An implementation of the SHACAL-1 block cipher.
  * @version 0.1
  * @date 2022-10-21
+ * 
+ * The SHACAL-1 block cipher is an ARX block cipher pulled 
+ * from the SHA-1 hash function. I have not been able to 
+ * track down any official documentation on the block cipher 
+ * itself so I have used the FIPS documentation of SHA-1.
  */
 
 #include <IO.h>
