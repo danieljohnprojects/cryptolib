@@ -15,7 +15,10 @@
  * @param out0 The expected first byte of the hash.
  * @param out1 The expected second byte of the hash.
  */
-void test_hash(void (*hash)(const uint8_t *, size_t, uint8_t *), 
-               const char *test_string,
-               uint8_t out0,
-               uint8_t out1);
+void
+test_hash(
+    void (*hash)(const uint8_t *, size_t, uint8_t *), 
+    const char *test_string,
+    uint8_t out0,
+    uint8_t out1
+);

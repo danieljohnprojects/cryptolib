@@ -1,5 +1,6 @@
 #pragma once
 
+#include <shacal_1.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,7 +14,10 @@
  * a length extension attack).
  * @param digest_buffer A buffer that will store the resulting digest.
  */
-void sha1digest(const uint8_t *message,
-            size_t message_length,
-            size_t prefix_length,
-            uint8_t *digest_buffer);
+void 
+sha1digest(
+    const uint8_t *message,
+    size_t message_length,
+    size_t prefix_length,
+    block_t digest_buffer
+);
