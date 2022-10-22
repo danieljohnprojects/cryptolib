@@ -46,12 +46,12 @@ f3(uint32_t B, uint32_t C, uint32_t D) {
 
 void
 initialise_key(
-    const uint8_t initial_key[BYTES_PER_KEY],
+    const uint32_t initial_key[WORDS_PER_KEY],
     shacal_1_key_t expanded_key
 ) {
     uint64_t t = 0;
-    for (; t < BYTES_PER_KEY/BYTES_PER_WORD; t++) {
-        expanded_key[t] = ((uint32_t *) initial_key)[t];
+    for (; t < WORDS_PER_KEY; t++) {
+        expanded_key[t] = initial_key[t];
     }
 
     for (; t < ROUNDS; t++) {

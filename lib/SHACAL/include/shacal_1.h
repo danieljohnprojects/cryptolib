@@ -4,7 +4,7 @@
 
 #define BYTES_PER_WORD 4
 #define WORDS_PER_BLOCK 5
-#define BYTES_PER_KEY 64
+#define WORDS_PER_KEY 16
 #define ROUNDS 80
 
 typedef uint32_t block_t[WORDS_PER_BLOCK];
@@ -12,7 +12,7 @@ typedef uint32_t shacal_1_key_t[ROUNDS];
 
 void
 initialise_key(
-    const uint8_t initial_key[BYTES_PER_KEY],
+    const uint32_t initial_key[WORDS_PER_KEY],
     shacal_1_key_t expanded_key
 );
 
