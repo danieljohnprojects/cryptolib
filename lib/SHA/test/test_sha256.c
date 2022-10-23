@@ -4,39 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <shacal_1.h>
-#include <Hash.h>
+#include <shacal_2.h>
+#include <SHA256.h>
 #include <IO.h>
 
 // #include "../src/SHA1constants.h"
 
-static void init_sha_1_digest(block_t digest)
-{
-    digest[0] = 0x67452301;
-    digest[1] = 0xefcdab89;
-    digest[2] = 0x98badcfe;
-    digest[3] = 0x10325476;
-    digest[4] = 0xc3d2e1f0;
-    // digest[ 0] = 0x67;
-    // digest[ 1] = 0x45;
-    // digest[ 2] = 0x23;
-    // digest[ 3] = 0x01;
-    // digest[ 4] = 0xef;
-    // digest[ 5] = 0xcd;
-    // digest[ 6] = 0xab;
-    // digest[ 7] = 0x89;
-    // digest[ 8] = 0x98;
-    // digest[ 9] = 0xba;
-    // digest[10] = 0xdc;
-    // digest[11] = 0xfe;
-    // digest[12] = 0x10;
-    // digest[13] = 0x32;
-    // digest[14] = 0x54;
-    // digest[15] = 0x76;
-    // digest[16] = 0xc3;
-    // digest[17] = 0xd2;
-    // digest[18] = 0xe1;
-    // digest[19] = 0xf0;
+static void init_sha_256_digest(block_t digest) {
+    digest[0] = 0x6a09e667;
+    digest[1] = 0xbb67ae85;
+    digest[2] = 0x3c6ef372;
+    digest[3] = 0xa54ff53a;
+    digest[4] = 0x510e527f;
+    digest[5] = 0x9b05688c;
+    digest[6] = 0x1f83d9ab;
+    digest[7] = 0x5be0cd19;
 }
 
 /**
@@ -58,7 +40,7 @@ test_hash(
 ) {
     size_t message_length = strlen(test_string);
     block_t digest_buffer;
-    init_sha_1_digest(digest_buffer);
+    init_sha_256_digest(digest_buffer);
     
     #ifdef VERBOSE
         printf("Computing hash of \"%s\":\n", test_string);
@@ -81,32 +63,32 @@ test_hash(
     #endif
 }
 
-void test_sha1digest()
+void test_sha256digest()
 {
     #ifdef VERBOSE
-        printf("==================\n");
-        printf("Testing SHA1 hash.\n");
-        printf("==================\n");
+        printf("=====================\n");
+        printf("Testing SHA-256 hash.\n");
+        printf("=====================\n");
     #endif
 
-    test_hash(sha1digest, "", 0xda39a3ee, 0x5e6b4b0d);
-    // Should be da39a3ee 5e6b4b0d 3255bfef 95601890 afd80709
+    test_hash(sha256digest, "", 0xe3b0c442, 0x98fc1c14);
+    // Should be e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855
 
-    test_hash(sha1digest, "abc", 0xa9993e36, 0x4706816a);
-    // Should be a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d
+    test_hash(sha256digest, "abc", 0xba7816bf, 0x8f01cfea);
+    // Should be ba7816bf 8f01cfea 414140de 5dae2223 b00361a3 96177a9c b410ff61 f20015ad
     
-    test_hash(sha1digest, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 0x84983e44, 0x1c3bd26e);
-    // Should be 84983e44 1c3bd26e baae4aa1 f95129e5 e54670f1
+    test_hash(sha256digest, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 0x248d6a61, 0xd20638b8);
+    // Should be 248d6a61 d20638b8 e5c02693 0c3e6039 a33ce459 64ff2167 f6ecedd4 19db06c1
 
-    test_hash(sha1digest, "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", 0xa49b2446, 0xa02c645b);
-    // Should be a49b2446 a02c645b f419f995 b6709125 3a04a259
+    test_hash(sha256digest, "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu", 0xcf5b16a7, 0x78af8380);
+    // Should be cf5b16a7 78af8380 036ce59e 7b049237 0b249b11 e8f07a51 afac4503 7afee9d1
     
     #ifdef LONG_TESTS
     char s[1000000 + 1];
     for (size_t i = 0; i < 1000000; i++)
         s[i] = 'a';
     s[1000000] = '\0';
-    test_hash(sha1digest, s, 0x34aa973c, 0xd4c4daa4);
+    test_hash(sha256digest, s, 0x34aa973c, 0xd4c4daa4);
     // Should be 34aa973c d4c4daa4 f61eeb2b dbad2731 6534016f
 
     // At the moment this test fails.
@@ -117,38 +99,33 @@ void test_sha1digest()
         strncpy(long_s + i*64, s, 64);
     }
     long_s[107371824] = '\0';
-    test_hash(sha1digest, s, 0x7789f0c9, 0xef7bfc40);
+    test_hash(sha256digest, s, 0x7789f0c9, 0xef7bfc40);
     // Should be 7789f0c9 ef7bfc40 d9331114 3dfbe69e 2017f592
     #endif
     
-    // char t[640 + 1];
-    // for (size_t i = 0; i < 20; i++)
-    //     strcpy(t + i*32, "01234567012345670123456701234567");
-    // test_hash(sha1digest, t, 0xde, 0xa3);
-    
     #ifdef VERBOSE
-        printf("SHA1 tests passed!!\n\n");
+        printf("SHA256 tests passed!!\n\n");
     #endif
 }
 
-void test_sha1extend()
+void test_sha256extend()
 {
     #ifdef VERBOSE
-        printf("===============================\n");
-        printf("Testing SHA1 length extensions.\n");
-        printf("===============================\n");
+        printf("=================================\n");
+        printf("Testing SHA256 length extensions.\n");
+        printf("=================================\n");
     #endif
     block_t prefix_hash;
-    init_sha_1_digest(prefix_hash);
+    init_sha_256_digest(prefix_hash);
 
     uint8_t message[] = {'a', 'b', 'c'};
-    sha1digest(message, 3, 0, prefix_hash);
+    sha256digest(message, 3, 0, prefix_hash);
 
     block_t extended_hash;
     for (size_t i = 0; i < WORDS_PER_BLOCK; i++)
         extended_hash[i] = prefix_hash[i];
     
-    sha1digest(message, 3, 3, extended_hash);
+    sha256digest(message, 3, 3, extended_hash);
     
     uint8_t extended_message[64 + 3];
     for (size_t i = 0; i < 64 + 3; i++)
@@ -163,16 +140,15 @@ void test_sha1extend()
     extended_message[66] = 'c';
 
     block_t compare_hash;
-    init_sha_1_digest(compare_hash);
-    sha1digest(extended_message, 64+3, 0, compare_hash);
+    init_sha_256_digest(compare_hash);
+    sha256digest(extended_message, 64+3, 0, compare_hash);
 
     for (size_t i = 0; i < WORDS_PER_BLOCK; i++)
         assert (compare_hash[i] == extended_hash[i]);
-    printf("SHA1 length extension tests passed!\n");
+    printf("SHA256 length extension tests passed!\n");
 }
 
-int main()
-{
-    test_sha1digest();
-    test_sha1extend();
+int main() {
+    test_sha256digest();
+    test_sha256extend();
 }
