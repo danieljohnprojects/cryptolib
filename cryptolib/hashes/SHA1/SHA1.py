@@ -3,34 +3,16 @@ from ...utils.files import build_filename
 
 libpath = build_filename('build/lib/SHA/libSHA1.so')
 SHA1libC = CDLL(libpath)
-# init_buffer = bytes.fromhex('67452301efcdab8998badcfe10325476c3d2e1f0')
-init_buffer = [
-    0x67452301,
-    0xefcdab89,
-    0x98badcfe,
-    0x10325476,
-    0xc3d2e1f0,
-]
 
-def sha1digest(message: bytes) -> bytes:
-    """
-    Compute the SHA1 hash of the given message.
-
-    Args:
-        message: A string of bytes for which we will compute the hash.
-    Returns:
-        The 20-byte SHA1 hash.
-    Raises:
-        TypeError: If message is not a byte-like object.
-    """
-    if not isinstance(message, (bytes, bytearray)):
-        raise TypeError(f"message must be a byte-like object. Got {type(message)}.")
-    bytes_buffer = b''.join([x.to_bytes(4, 'little') for x in init_buffer])
-    digest_buffer = create_string_buffer(bytes_buffer, len(bytes_buffer))
-    SHA1libC.sha1digest(message, len(message), 0, digest_buffer)
-    digest = [digest_buffer.raw[4*i:4*(i+1)] for i in range(5)]
-    digest = b''.join([b[::-1] for b in digest])
-    return digest
+block_t = c_uint32 * 5
+def init_buffer_from_bytes(b: bytes): 
+    return block_t(
+        int.from_bytes(b[  : 4], 'big', signed=False),
+        int.from_bytes(b[ 4: 8], 'big', signed=False),
+        int.from_bytes(b[ 8:12], 'big', signed=False),
+        int.from_bytes(b[12:16], 'big', signed=False),
+        int.from_bytes(b[16:  ], 'big', signed=False)
+    )
 
 def sha1extend(prev_hash: bytes, prev_len: int, message: bytes) -> bytes:
     """
@@ -49,16 +31,28 @@ def sha1extend(prev_hash: bytes, prev_len: int, message: bytes) -> bytes:
     if not isinstance(message, (bytes, bytearray)):
         raise TypeError(f"message must be a byte-like object. Got {type(message)}.")
     if len(prev_hash) != 20:
-        raise ValueError(f"Previous hash must have length {len(init_buffer)}. Got {len(prev_hash)}.")
-    prev_hash = [prev_hash[4*i:4*(i+1)] for i in range(5)]
-    prev_hash = [int.from_bytes(x, 'big') for x in prev_hash]
-    prev_hash = b''.join([x.to_bytes(4, 'little') for x in prev_hash])
-    
-    digest_buffer = create_string_buffer(prev_hash, len(prev_hash))
+        raise ValueError(f"Previous hash must have length {len(init_buffer)}. Got {len(prev_hash)}.")    
+    digest_buffer = init_buffer_from_bytes(prev_hash)
     SHA1libC.sha1digest(message, len(message), prev_len, digest_buffer)
-    digest = [digest_buffer.raw[4*i:4*(i+1)] for i in range(5)]
-    digest = b''.join([b[::-1] for b in digest])
+    digest = b''.join([i.to_bytes(4, 'big') for i in digest_buffer])
     return digest
+
+def sha1digest(message: bytes) -> bytes:
+    """
+    Compute the SHA1 hash of the given message.
+
+    Args:
+        message: A string of bytes for which we will compute the hash.
+    Returns:
+        The 20-byte SHA1 hash.
+    Raises:
+        TypeError: If message is not a byte-like object.
+    """
+    return sha1extend(
+        bytes.fromhex('67452301efcdab8998badcfe10325476c3d2e1f0'), 
+        0, 
+        message
+    )
 
 def sha1extend_message(prefix_len: int, message: bytes, suffix: bytes) -> bytes:
     """
