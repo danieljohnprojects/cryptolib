@@ -1,6 +1,6 @@
 from .BCEngine import BCEngine
 from .AES import AES
-from .SHACAL_1 import SHACAL1
+from .SHACAL1 import SHACAL1
 
 # Mapping from name of algorithm to a tuple consisting of:
 #  - a function for generating the engine
