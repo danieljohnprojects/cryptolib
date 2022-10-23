@@ -1,5 +1,5 @@
 /**
- * @file SHACAL_1_encr.c
+ * @file shacal_1.c
  * @author Daniel John (daniel.john.projects@gmail.com)
  * @brief An implementation of the SHACAL-1 block cipher.
  * @version 0.1
