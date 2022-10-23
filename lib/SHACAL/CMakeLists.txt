@@ -14,7 +14,7 @@ add_library(
 target_include_directories(shacal2 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(shacal2 PRIVATE IO)
 target_compile_options(shacal2 PRIVATE "-g" "-Wall" "-Wextra")
-target_compile_definitions(shacal2 PRIVATE VERBOSE)
+# target_compile_definitions(shacal2 PRIVATE VERBOSE)
 
 add_executable(
     shacal_1_test

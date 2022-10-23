@@ -18,7 +18,7 @@ target_include_directories(SHA256 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(SHA256 PRIVATE IO shacal1)
 target_compile_options(SHA256 PRIVATE "-g" "-Wall" "-Wextra")
 target_compile_definitions(SHA256 PRIVATE SHA256)
-target_compile_definitions(SHA256 PRIVATE VERBOSE)
+# target_compile_definitions(SHA256 PRIVATE VERBOSE)
 
 add_executable(
     sha1_test
