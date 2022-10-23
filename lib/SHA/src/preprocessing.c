@@ -1,31 +1,18 @@
 /**
- * @file sha1.c
- * @brief An implementation of the SHA1 hash function. 
+ * @file preprocessing.c
+ * @author Daniel John (daniel.john.projects@gmail.com)
+ * @brief Code for message preprocessing in SHA-1 and SHA-256
+ * @version 0.1
+ * @date 2022-10-23
  * 
- * The SHA1 hash takes in an arbitrary length message and computes a 160-bit 
- * value. See the description given in RFC 3174:
- * http://www.faqs.org/rfcs/rfc3174.html
- * or in the FIPS publication:
- * https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
- * for full details.
+ * @copyright Copyright (c) 2022
  * 
- * We make use of the SHACAL-1 block cipher, emphasising the use of the 
- * Davies-Meyer construction.
- * 
- * We do not initialise the digest buffer to the correct values. This makes it 
- * more convenient to perform length extension attacks but passes the burden of
- * initialisation to the user when computing a regular hash.
- * 
- * We will always assume that messages are strings of bytes, rather than of 
- * bits.
  */
-#ifdef VERBOSE
-#include <stdio.h>
-#include <IO.h>
-#endif
 
-#include <Hash.h>
-#include <shacal_1.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#define BYTES_PER_WORD 4
 
 // Padding is added to a message so that its length in bytes is congruent to 
 // PAD_REMAINDER modulo PAD_BLOCK.
@@ -43,7 +30,7 @@
  * @param message_length The length of the unpadded message in bytes.
  * @return The length of the corresponding buffer in words.
  */
-static size_t determine_padded_length(size_t message_length) {
+size_t determine_padded_length(size_t message_length) {
     size_t x80_padding_length = 1;
     size_t zero_padding_length = ((PAD_REMAINDER - (message_length + x80_padding_length)) % PAD_BLOCK);
     size_t length_length = PAD_BLOCK - PAD_REMAINDER;
@@ -68,7 +55,7 @@ static size_t determine_padded_length(size_t message_length) {
  * @param buffer A pointer to an array that will store the processed message.
  * @param buffer_length The length of the buffer in 32-bit words.
  */
-static void 
+void 
 preprocess(
     const uint8_t *message, 
     size_t message_length,
@@ -104,57 +91,4 @@ preprocess(
     message_length = (message_length + prefix_length) * 8;
     buffer[buffer_length - 1] = message_length & 0xffffffff;
     buffer[buffer_length - 2] = (message_length & 0xffffffff00000000) >> 32;
-}
-
-/**
- * @brief Computes the SHA1 digest of a message and stores it in the given 
- * buffer. 
- * 
- * @param message A string of bytes to digest.
- * @param message_length The length of the message measured in bytes.
- * @param prefix_length The length of the original message not including any 
- * padding (0 unless performing a length extension attack).
- * @param digest_buffer A buffer that will store the resulting digest.
- */
-void 
-sha1digest(
-    const uint8_t *message, 
-    size_t message_length,
-    size_t prefix_length,
-    block_t digest_buffer
-) {
-    #ifdef VERBOSE
-    printf("Recieved message of length %ld bytes.\n", message_length);
-    #endif
-    size_t buffer_length = determine_padded_length(message_length);
-    #ifdef VERBOSE
-    printf("Creating buffer of length %ld words to hold processed message.\n", buffer_length);
-    #endif
-    uint32_t processed_message[buffer_length];
-
-    preprocess(message, message_length, prefix_length, processed_message, buffer_length);
-    #ifdef VERBOSE
-    printf("Original message:\n");
-    print_bytes(message, message_length);
-    printf("Processed message:\n");
-    print_words32(processed_message, buffer_length);
-    #endif
-
-    // We need to add the previous digest state onto the encrypted block so make a copy of it now.
-    block_t previous_digest_state;
-    for (size_t i = 0; i < WORDS_PER_BLOCK; i++) {
-        previous_digest_state[i] = digest_buffer[i];
-    }
-
-    // Split the message into blocks of length 512 bits and use these to key the SHACAL-1 block cipher.
-    size_t num_key_blocks = buffer_length / WORDS_PER_KEY;
-    shacal_1_key_t key;
-    for (size_t i = 0; i < num_key_blocks; i++) {
-        initialise_key(processed_message + i*WORDS_PER_KEY, key);
-        encrypt(key, digest_buffer);
-        for (size_t j = 0; j < WORDS_PER_BLOCK; j++) {
-            digest_buffer[j] += previous_digest_state[j];
-            previous_digest_state[j] = digest_buffer[j];
-        }
-    }
 }
