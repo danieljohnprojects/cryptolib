@@ -15,6 +15,8 @@ def md2digest(message: bytes) -> bytes:
     Returns:
         The 16-byte MD2 hash.
     """
+    if not isinstance(message, (bytes, bytearray)):
+        raise TypeError(f"message must be a byte-like object. Got {type(message)}.")
     digest_buffer = create_string_buffer(init_buffer, len(init_buffer))
     MD2libC.md2digest(message, len(message), digest_buffer)
     return digest_buffer.raw
