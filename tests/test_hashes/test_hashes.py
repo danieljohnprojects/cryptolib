@@ -3,11 +3,12 @@ import pytest
 import random
 
 from cryptolib.hashes.SHA1 import sha1digest, sha1extend, sha1extend_message
+from cryptolib.hashes.SHA2 import sha256digest, sha224digest, sha256extend, sha256extend_message
 from cryptolib.hashes.MD2 import md2digest
 from cryptolib.hashes.MD4 import md4digest, md4extend, md4extend_message
 from cryptolib.hashes.MD5 import md5digest, md5extend, md5extend_message
 from cryptolib.hashes.MAC import prefixMAC, HMAC
-from Crypto.Hash import SHA1, MD2, MD4, MD5
+from Crypto.Hash import SHA1, SHA256, SHA224, MD2, MD4, MD5
 
 test_vectors = [
     b'',
@@ -46,19 +47,36 @@ def test_sha1digest():
     ref = lambda m: SHA1.new(m).digest()
     hash_test(sha1digest, ref, test_answers)
     
-    assert sha1digest(b'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq') == bytes.fromhex('84983e441c3bd26ebaae4aa1f95129e5e54670f1')
-    
-    h = SHA1.new(b'')
-    assert sha1digest(b'') == h.digest()
 
-    for _ in range(20):
-        l = rng.randint(0, 300)
-        message = rng.randbytes(l)
-        h = SHA1.new(message)
-        assert h.digest() == sha1digest(message)
+def test_sha256digest():
+    test_answers = [
+        bytes.fromhex('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+        bytes.fromhex('ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb'),
+        bytes.fromhex('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
+        bytes.fromhex('f7846f55cf23e14eebeab5b4e1550cad5b509e3348fbc4efa3a1413d393cb650'),
+        bytes.fromhex('71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73'),
+        bytes.fromhex('db4bfcbd4da0cd85a60c3c37d3fbd8805c77f15fc6b1fdfe614ee0a7c8fdb4c0'),
+        bytes.fromhex('f371bc4a311f2b009eef952dd83ca80e2b60026c8e935592d0f9c308453c813e'),
+        bytes.fromhex('41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3'),
+        bytes.fromhex('27dd1f61b867b6a0f6e9d8a41c43231de52107e53ae424de8f847b821db4b711'),
+    ]
+    ref = lambda m: SHA256.new(m).digest()
+    hash_test(sha256digest, ref, test_answers)
 
-    with pytest.raises(TypeError):
-        sha1digest('abc')
+def test_sha224digest():
+    test_answers = [
+        bytes.fromhex('d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f'),
+        bytes.fromhex('abd37534c7d9a2efb9465de931cd7055ffdb8879563ae98078d6d6d5'),
+        bytes.fromhex('23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7'),
+        bytes.fromhex('2cb21c83ae2f004de7e81c3c7019cbcb65b71ab656b22d6d0c39b8eb'),
+        bytes.fromhex('45a5f72c39c5cff2522eb3429799e49e5f44b356ef926bcf390dccc2'),
+        bytes.fromhex('bff72b4fcb7d75e5632900ac5f90d219e05e97a7bde72e740db393d9'),
+        bytes.fromhex('b50aecbe4e9bb0b57bc5f3ae760a8e01db24f203fb3cdcd13148046e'),
+        bytes.fromhex('4e8f0ce90b64661a2b5e84be6d93a7d9b76871062f1814433d04a03d'),
+        bytes.fromhex('00568fba93e8718c2f7dcd82fa94501d59bb1bbcba2c7dc2ba5882db'),
+    ]
+    ref = lambda m: SHA224.new(m).digest()
+    hash_test(sha224digest, ref, test_answers)
 
 def test_md2digest():
     test_answers = [
@@ -105,11 +123,6 @@ def test_md5digest():
     ref = lambda m: MD5.new(m).digest()
     hash_test(md5digest, ref, test_answers)
     
-    for _ in range(20):
-        l = rng.randint(0, 300)
-        message = rng.randbytes(l)
-        h = MD5.new(message)
-        assert h.digest() == md5digest(message)
 
 def test_sha1extend():
     # Extend hash of 'abc'
