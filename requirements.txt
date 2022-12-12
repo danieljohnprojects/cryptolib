@@ -3,11 +3,12 @@ autopep8==1.5.7
 backcall==0.2.0
 bcrypt==3.2.0
 capstone==4.0.2
-certifi==2021.5.30
+certifi==2022.12.7
 cffi==1.14.5
 chardet==4.0.0
 colored-traceback==0.3.0
 cryptography==3.4.7
+-e git+git@github.com:danieljohnprojects/cryptolib.git@ca66933edc77bd065c315c69e4fe5738bb9f611a#egg=cryptolib
 decorator==5.0.8
 idna==2.10
 iniconfig==1.1.1
