@@ -1,3 +1,4 @@
+asttokens==2.2.1
 attrs==21.2.0
 autopep8==1.5.7
 backcall==0.2.0
@@ -7,18 +8,20 @@ certifi==2022.12.7
 cffi==1.14.5
 chardet==4.0.0
 colored-traceback==0.3.0
-cryptography==3.4.7
--e git+git@github.com:danieljohnprojects/cryptolib.git@ca66933edc77bd065c315c69e4fe5738bb9f611a#egg=cryptolib
+cryptography==39.0.2
+-e git+git@github.com:danieljohnprojects/cryptolib.git@9c4fab8cfe6894bbe851b5ac3ded0139b03d3514#egg=cryptolib
 decorator==5.0.8
+executing==1.2.0
 idna==2.10
 iniconfig==1.1.1
 intervaltree==3.1.0
-ipython==7.23.1
+ipython==8.11.0
 ipython-genutils==0.2.0
 jedi==0.18.0
-Mako==1.1.4
+Mako==1.2.4
 MarkupSafe==2.0.1
 matplotlib-inline==0.1.2
+numpy==1.23.5
 packaging==20.9
 paramiko==2.7.2
 parso==0.8.2
@@ -27,9 +30,10 @@ pexpect==4.8.0
 pickleshare==0.7.5
 pluggy==0.13.1
 plumbum==1.7.0
-prompt-toolkit==3.0.18
+prompt-toolkit==3.0.38
 psutil==5.8.0
 ptyprocess==0.7.0
+pure-eval==0.2.2
 pwntools==4.5.1
 py==1.10.0
 pycodestyle==2.7.0
@@ -48,6 +52,7 @@ ROPGadget==6.5
 rpyc==5.0.1
 six==1.16.0
 sortedcontainers==2.4.0
+stack-data==0.6.2
 toml==0.10.2
 traitlets==5.0.5
 unicorn==1.0.2rc3
