@@ -3,13 +3,13 @@ import random
 from Crypto.Cipher import AES
 
 from cryptolib.blockciphers.attacks.chosen_plain import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC_key_as_iv, EncryptECB, EncryptCBC, EncryptCFB, EncryptOFB, EncryptCBC_fixed_iv, EncryptCFB_fixed_iv, EncryptOFB_fixed_iv
+from cryptolib.blockciphers.oracles import ECBoracle, CBCoracle, CBCoracle_FixedIV
 from cryptolib.utils.padding import pkcs7
 
 
 def test_get_block_size():
     rng = random.Random(12345)
-    oracle = EncryptECB('aes', rng.randbytes(16))
+    oracle, _ = ECBoracle('aes', rng.randbytes(16))
     assert get_block_size(oracle) == 16
 
     with pytest.raises(ValueError):
@@ -34,7 +34,7 @@ def test_get_additional_message_len():
             key = rng.randbytes(16)
             self.prefix = b'abcdef'
             self.suffix = b'ghijklmno'
-            self.engine = EncryptECB('aes', key)
+            self.engine, _ = ECBoracle('aes', key)
 
         def __call__(self, message: bytes) -> bytes:
             return self.engine(self.prefix + message + self.suffix)
@@ -44,18 +44,17 @@ def test_get_additional_message_len():
             key = rng.randbytes(16)
             self.prefix = b'abcdef'
             self.suffix = b'ghijklmno'
-            self.engine = EncryptCBC_fixed_iv('aes', key)
+            self.engine, _ = CBCoracle_FixedIV(key)
 
         def __call__(self, message: bytes) -> bytes:
-            # Don't forget to remove the IV.
-            return self.engine(self.prefix + message + self.suffix)[16:]
+            return self.engine(self.prefix + message + self.suffix)
 
     class additional_plaintext_oracle_cbc:
         def __init__(self):
             key = rng.randbytes(16)
             self.prefix = b'abcdef'
             self.suffix = b'ghijklmno'
-            self.engine = EncryptCBC('aes', key)
+            self.engine, _ = CBCoracle('aes', key)
 
         def __call__(self, message: bytes) -> bytes:
             # Don't forget to remove the IV.
@@ -87,98 +86,81 @@ def test_diagnose_mode():
     rng = random.Random(12345)
     key = rng.randbytes(16)
     modes = {
-        'cbc': EncryptCBC_fixed_iv,
-        'cfb': EncryptCFB_fixed_iv,
-        'ecb': EncryptECB,
-        'stream': EncryptOFB_fixed_iv
+        'cbc': CBCoracle_FixedIV(key)[0],
+        'ecb': ECBoracle('aes', key)[0],
     }
-    for mode, constructor in modes.items():
-        oracle = constructor('aes', key)
+    for mode, oracle in modes.items():
         assert diagnose_mode(oracle, 16) == mode
 
     # Check that probabilistic approach to CBC checking is working.
     for _ in range(100):
         key = rng.randbytes(16)
-        oracle = EncryptCBC_fixed_iv('aes', key)
+        oracle, _ = CBCoracle_FixedIV(key)
         assert diagnose_mode(oracle, 16) == 'cbc'
 
     # Raises error if only one allowable byte is given
     with pytest.raises(ValueError):
-        oracle = EncryptCBC_fixed_iv('aes')
+        oracle, _ = CBCoracle_FixedIV(rng.randbytes(16))
         diagnose_mode(oracle, 16, allowable_bytes=b'a')
 
     # Raises error if variable IV is used.
     with pytest.raises(RuntimeError):
-        oracle = EncryptCFB('aes')
+        oracle, _ = CBCoracle('aes')
         diagnose_mode(oracle, 16)
 
     # Additional plaintext and quoting characters should not alter results of function:
-    class additional_plaintext_oracle:
-        def __init__(self, engine_constructor):
-            self.engine = engine_constructor('aes', key)
-            self.prefix = b'email='
-            self.suffix = b'&UID=10&role=user'
-            self.quote_chars = b'=&'
+    def build_additional_plaintext_oracle(oracle):
+        prefix = b'email='
+        suffix = b'&UID=10&role=user'
+        quote_chars = b'=&'
 
-        def __call__(self, message: bytes) -> bytes:
-            for c in self.quote_chars:
+        def new_oracle(message: bytes) -> bytes:
+            for c in quote_chars:
                 b = bytes([c])
                 message = message.replace(b, b'"' + b + b'"')
-            return self.engine(self.prefix + message + self.suffix)
+            return oracle(prefix + message + suffix)
+        return new_oracle
 
     allowable_bytes = bytes(set(range(256)) - set([ord('&'), ord('=')]))
-    for mode, constructor in modes.items():
-        oracle = additional_plaintext_oracle(constructor)
-        assert diagnose_mode(oracle, 16, prefix_length=len(
-            oracle.prefix), allowable_bytes=allowable_bytes) == mode
+    for mode, oracle in modes.items():
+        additional_plaintext_oracle = build_additional_plaintext_oracle(oracle)
+        assert diagnose_mode(additional_plaintext_oracle, 16, prefix_length=len(
+            b'email='), allowable_bytes=allowable_bytes) == mode
 
 
 def test_decrypt_suffix():
     rng = random.Random(12345)
 
-    class additional_plaintext_oracle_ecb:
-        def __init__(self):
-            key = rng.randbytes(16)
-            self.prefix = b'abcdef'
-            self.suffix = b'ghijklmno'
-            self.engine = EncryptECB('aes', key)
+    def build_additional_plaintext_oracle(encryption_oracle, prefix, suffix):
 
-        def __call__(self, message: bytes) -> bytes:
-            return self.engine(self.prefix + message + self.suffix)
+        def new_oracle(message: bytes) -> bytes:
+            return encryption_oracle(prefix + message + suffix)
+        return new_oracle
 
-    class additional_plaintext_oracle_cbc_fixed_iv:
-        def __init__(self):
-            key = rng.randbytes(16)
-            self.prefix = b'abcdef'
-            self.suffix = b'ghijklmno'
-            self.engine = EncryptCBC_fixed_iv('aes', key)
+    true_prefix = b'abcdef'
+    true_suffix = b'ghijklmno'
 
-        def __call__(self, message: bytes) -> bytes:
-            # Don't forget to remove the IV.
-            return self.engine(self.prefix + message + self.suffix)[16:]
+    oracle = build_additional_plaintext_oracle(
+        ECBoracle('aes', rng.randbytes(16))[0],
+        true_prefix,
+        true_suffix)
+    suffix = decrypt_suffix(oracle, len(true_suffix), len(true_prefix), 16)
+    assert suffix == true_suffix
 
-    class additional_plaintext_oracle_cbc:
-        def __init__(self):
-            key = rng.randbytes(16)
-            self.prefix = b'abcdef'
-            self.suffix = b'ghijklmno'
-            self.engine = EncryptCBC('aes', key)
-
-        def __call__(self, message: bytes) -> bytes:
-            # Don't forget to remove the IV.
-            return self.engine(self.prefix + message + self.suffix)[16:]
-
-    oracle = additional_plaintext_oracle_ecb()
-    suffix = decrypt_suffix(oracle, len(oracle.suffix), len(oracle.prefix), 16)
-    assert suffix == oracle.suffix
-
-    oracle = additional_plaintext_oracle_cbc_fixed_iv()
-    suffix = decrypt_suffix(oracle, len(oracle.suffix), len(oracle.prefix), 16)
-    assert suffix == oracle.suffix
+    oracle = build_additional_plaintext_oracle(
+        CBCoracle_FixedIV(rng.randbytes(16))[0],
+        true_prefix,
+        true_suffix)
+    suffix = decrypt_suffix(oracle, len(true_suffix), len(true_prefix), 16)
+    assert suffix == true_suffix
     with pytest.raises(RuntimeError):
-        decrypt_suffix(oracle, len(oracle.suffix),
-                       len(oracle.prefix), 16, b'qwer')
+        decrypt_suffix(oracle, len(true_suffix),
+                       len(true_prefix), 16, b'qwer')
 
-    oracle = additional_plaintext_oracle_cbc()
+    # Doesn't work if the IV changes.
+    oracle = build_additional_plaintext_oracle(
+        CBCoracle('aes', rng.randbytes(16))[0],
+        true_prefix,
+        true_suffix)
     with pytest.raises(RuntimeError):
-        decrypt_suffix(oracle, len(oracle.suffix), len(oracle.prefix), 16)
+        decrypt_suffix(oracle, len(true_suffix), len(true_prefix), 16)

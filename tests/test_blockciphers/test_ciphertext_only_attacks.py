@@ -2,7 +2,7 @@ import pytest
 import random
 
 from cryptolib.blockciphers.attacks.ciphertext_only import get_max_block_size, evidence_of_ECB
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC, EncryptECB
+from cryptolib.blockciphers.oracles import ECBoracle, CBCoracle
 
 
 def test_get_max_block_size():
@@ -23,8 +23,8 @@ def test_evidence_of_ECB():
     plaintext = b'a'*48
     key = rng.randbytes(16)
 
-    ecb_enc = EncryptECB('aes', key)
-    cbc_enc = EncryptCBC('aes', key)
+    ecb_enc, _ = ECBoracle('aes', key)
+    cbc_enc, _ = CBCoracle('aes', key)
     ciphertext_ecb = ecb_enc(plaintext)
     ciphertext_cbc = cbc_enc(plaintext)
 
