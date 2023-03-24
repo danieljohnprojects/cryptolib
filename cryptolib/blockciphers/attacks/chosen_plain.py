@@ -12,9 +12,10 @@ from math import gcd
 from textwrap import dedent
 from typing import Callable, Optional, Tuple
 
-from cryptolib.blockciphers.ciphertext_only.attacks import evidence_of_ECB
+from cryptolib.blockciphers.attacks.ciphertext_only import evidence_of_ECB
 from cryptolib.utils.byteops import block_xor, bytes_to_blocks
 from cryptolib.utils.padding import pkcs7
+
 
 def get_block_size(
         oracle: Callable,
@@ -75,16 +76,16 @@ def get_additional_message_len(
 
     a    -> AaB.|     -> ****
     b    -> AbB.|     -> ****
-    
+
     aa   -> AaaB|.... -> ********
     ab   -> AabB|.... -> ********
-    
+
     aaa  -> Aaaa|B... -> ********
     aab  -> Aaab|B... -> ********
-    
+
     aaaa -> Aaaa|aB.. -> yyyy****
     aaab -> Aaaa|bB.. -> yyyy****
-    
+
     We see that in the first three pairs of messages the ciphers returned by the oracle all differ in the first block. In the final pair the messages the first block of ciphertext is the same. We thus need to send pairs of messages until we see a change in the index of the first block that differs.
 
     The total length of the additional plaintext is easily determined by keeping track of when the ciphertext length jumps.
@@ -105,7 +106,8 @@ def get_additional_message_len(
         # Need to make sure we don't use the same byte for c and d.
         s = set(allowable_bytes)
         if len(s) < 2:
-            raise ValueError("allowable_bytes must have at least two distinct bytes")
+            raise ValueError(
+                "allowable_bytes must have at least two distinct bytes")
         a = bytes([s.pop()])
         b = bytes([s.pop()])
     else:
@@ -114,7 +116,8 @@ def get_additional_message_len(
 
     # Send the same message twice to check that they encrypt the same.
     if oracle(a) != oracle(a):
-        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
+        raise RuntimeError(
+            "Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
 
     indices = []
     lengths = []
@@ -171,7 +174,7 @@ def diagnose_mode(
     """
     if len(allowable_bytes) == 1:
         raise ValueError("Must specify more than one allowable byte.")
-    
+
     if allowable_bytes:
         c = bytes([allowable_bytes[0]])
         d = bytes([allowable_bytes[1]])
@@ -183,15 +186,16 @@ def diagnose_mode(
     plaintext = c*block_size
     ciphertext = oracle(plaintext)
     if oracle(plaintext) != ciphertext:
-        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
+        raise RuntimeError(
+            "Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
 
     # Now craft a plaintext with repeated blocks to check for ECB mode.
-    plaintext *= 10 # Don't actually need this many but just to be safe.
+    plaintext *= 10  # Don't actually need this many but just to be safe.
     ciphertext = oracle(plaintext)
     if evidence_of_ECB(ciphertext, block_size):
         return "ecb"
 
-    # To distinguish between CBC, CFB and stream cipher modes we look at how the ciphertext changes after a one byte change in the plaintext. 
+    # To distinguish between CBC, CFB and stream cipher modes we look at how the ciphertext changes after a one byte change in the plaintext.
     #   - A stream cipher will always have exactly one byte that is different.
     #   - In CBC mode the block in which the change occurred and every block after that will be scrambled. In general every byte of the following blocks will change, but it is possible that some bytes remain the same through random chance. We expect that the number of bytes that change will be a multiple of the block size.
     #   - In CFB mode the block in which the change occurred will remain the same except for the byte that was altered, and every block after that will be scrambled. This usually means that the number of different bytes will be congruent to 1 modulo the block size. Again, this is not guaranteed however since some of the bytes in the remaining blocks could remain the same by chance.
@@ -209,7 +213,7 @@ def diagnose_mode(
     #   pref|ixaa|abaa|....
 
     # We want to minimise the number of blocks that are added as padding, thus reducing the number of blocks in which a byte could remain the same by chance.
-    # In CBC mode with a block size of 16, there is approximately a 94% chance that a block of altered ciphertext has no bytes in common with corresponding block of unaltered ciphertext ( (255/256)^16 = 0.939 ). 
+    # In CBC mode with a block size of 16, there is approximately a 94% chance that a block of altered ciphertext has no bytes in common with corresponding block of unaltered ciphertext ( (255/256)^16 = 0.939 ).
     # If we send 16 messages it is highly likely that one of them will produce the desired behaviour, allowing us to distinguish between CBC and CFB easily.
 
     prefix_fill_size = (block_size - prefix_length) % block_size
@@ -220,11 +224,11 @@ def diagnose_mode(
         plaintext2 = c*prefix_fill_size + c*i + d + c*(block_size - 1 - i)
         ciphertext2 = oracle(plaintext2)
         bytes_diff = 0
-        for x,y in zip(ciphertext1, ciphertext2):
+        for x, y in zip(ciphertext1, ciphertext2):
             if x != y:
                 bytes_diff += 1
         max_bytes_diff = max(max_bytes_diff, bytes_diff)
-    
+
     # OFB is essentially a stream cipher so a change to one byte of the plaintext will leave all bytes of the ciphertext the same except for one.
     if max_bytes_diff == 1:
         return "stream"
@@ -234,15 +238,16 @@ def diagnose_mode(
     elif max_bytes_diff % block_size == 1:
         return "cfb"
     else:
-        raise RuntimeError("The provided oracle does not operate in one of the supported block cipher modes.")
+        raise RuntimeError(
+            "The provided oracle does not operate in one of the supported block cipher modes.")
 
 
 def decrypt_suffix(
-    oracle: Callable,
-    suffix_len: int,
-    prefix_len: int = 0,
-    block_size: int = 16,
-    allowable_bytes: Optional[bytes] = b'') -> bytes:
+        oracle: Callable,
+        suffix_len: int,
+        prefix_len: int = 0,
+        block_size: int = 16,
+        allowable_bytes: Optional[bytes] = b'') -> bytes:
     """
     Decrypts the suffix added by the oracle to the plaintext prior to encryption.
 
@@ -258,10 +263,10 @@ def decrypt_suffix(
 
         2. We then remove the first byte of the message and observe the oracle's reply, in particular the penultimate block:
         a|aaaa|aaa  -> PPPa|aaaa|aaaS|SS.. -> ****|****|&&&&|****
-        
+
         3. We now loop through all possible bytes, appending them to the message and finding one that matches the observed ciphertext:
         a|aaaa|aaaS -> PPPa|aaaa|aaaS|SSS. -> ****|****|&&&&|****
-        
+
         4. At this point we have found a match so we now the first byte of the suffix. We can return to step 2 to determine the next byte.
 
     Args:
@@ -285,8 +290,9 @@ def decrypt_suffix(
 
     # Check for randomised encryption
     if oracle(a) != oracle(a):
-        raise RuntimeError("Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
-    
+        raise RuntimeError(
+            "Provided oracle appears to use randomised encryption. This function only supports deterministic encryption.")
+
     # Number of blocks taken up by the prefix:
     num_prefix_blocks = prefix_len // block_size + 1
 
@@ -302,7 +308,8 @@ def decrypt_suffix(
         message = message[1:]
         # First character of
         encrypted_blocks = bytes_to_blocks(oracle(message), block_size)
-        target_block = encrypted_blocks[num_prefix_blocks + num_suffix_blocks - 1]
+        target_block = encrypted_blocks[num_prefix_blocks +
+                                        num_suffix_blocks - 1]
         for i in allowable_bytes:
             trial_blocks = bytes_to_blocks(oracle(
                 message + suffix + bytes([i])), block_size)

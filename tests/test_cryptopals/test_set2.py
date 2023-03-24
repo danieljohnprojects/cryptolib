@@ -2,9 +2,9 @@ import pytest
 import random
 import secrets
 
-from cryptolib.blockciphers.chosen_cipher.oracles import DecryptCBC
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC, EncryptCBC_fixed_iv, EncryptECB
-from cryptolib.blockciphers.chosen_plain.attacks import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
+from cryptolib.blockciphers.oracles import CBCoracle, CBCoracle_FixedIV, ECBoracle
+# from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC, EncryptCBC_fixed_iv, EncryptECB
+from cryptolib.blockciphers.attacks.chosen_plain import get_block_size, diagnose_mode, get_additional_message_len, decrypt_suffix
 from cryptolib.utils.byteops import bytes_to_blocks, block_xor
 from cryptolib.utils.padding import PaddingError, pkcs7, strip_pkcs7
 
@@ -31,6 +31,7 @@ def test_Challenge09():
 
     assert pkcs7(test_in, 20) == solution
 
+
 def test_Challenge10():
     """
     CBC mode is a block cipher mode that allows us to encrypt irregularly-sized messages, despite the fact that a block cipher natively only transforms individual blocks.
@@ -47,10 +48,11 @@ def test_Challenge10():
     solution = challenge10.solution
     key = b'YELLOW SUBMARINE'
 
-    oracle = DecryptCBC('aes', key)
+    _, oracle = CBCoracle('aes', key)
     iv = bytes(16)
 
     assert oracle(iv + ciphertext) == solution
+
 
 def test_Challenge11():
     """
@@ -75,14 +77,15 @@ def test_Challenge11():
     for _ in range(10):
         choice = random.choice(['ecb', 'cbc'])
         if choice == 'ecb':
-            oracle = EncryptECB('aes')
+            oracle, _ = ECBoracle('aes')
         else:
-            oracle = EncryptCBC('aes')
+            oracle, _ = CBCoracle_FixedIV()  # There will be a new IV for each loop
         try:
             mode = diagnose_mode(oracle, 16)
         except RuntimeError:
-            mode = 'cbc' # throws an error if encryption is randomised.
+            mode = 'cbc'  # throws an error if encryption is randomised.
         assert choice == mode
+
 
 def test_Challenge12():
     """
@@ -116,19 +119,15 @@ def test_Challenge12():
         Match the output of the one-byte-short input to one of the entries in your dictionary. You've now discovered the first byte of unknown-string.
         Repeat for the next byte.
     """
-    class secret_suffix_oracle_ecb:
-        def __init__(self):
-            self.suffix = challenge12.secret_suffix
-            self.engine = EncryptECB('aes')
-        def __call__(self, message: bytes) -> bytes:
-            return self.engine(message + self.suffix)
+    enc, _ = ECBoracle('aes')
+    def oracle(message): return enc(message + challenge12.secret_suffix)
 
-    oracle = secret_suffix_oracle_ecb()
     B = get_block_size(oracle)
     assert(diagnose_mode(oracle, block_size=B) == 'ecb')
     _, suffix_len = get_additional_message_len(oracle, B)
     suffix = decrypt_suffix(oracle, suffix_len, block_size=B)
     assert suffix == challenge12.secret_suffix
+
 
 def test_Challenge13():
     """
@@ -197,6 +196,7 @@ def test_Challenge13():
 
     assert server(b''.join(cipherblocks)) == b'admin'
 
+
 def test_Challenge14():
     """
     Take your oracle function from #12. Now generate a random count of random bytes and prepend this string to every plaintext. You are now doing:
@@ -205,20 +205,23 @@ def test_Challenge14():
 
     Same goal: decrypt the target-bytes. 
     """
-    class random_prefix_oracle:
-        def __init__(self, engine_constructor):
-            self.engine = engine_constructor('aes', secrets.token_bytes(16))
-            self.prefix = secrets.token_bytes(secrets.choice(range(6,20)))
-            self.suffix = secrets.token_bytes(secrets.choice(range(6,20)))
-        def __call__(self, message: bytes) -> bytes:
-            return self.engine(self.prefix + message + self.suffix)
 
-    oracle = random_prefix_oracle(EncryptCBC_fixed_iv)
+    class random_prefix_oracle:
+        def __init__(self):
+            self.encryptor, _ = CBCoracle_FixedIV()
+            self.prefix = secrets.token_bytes(secrets.choice(range(6, 20)))
+            self.suffix = secrets.token_bytes(secrets.choice(range(6, 20)))
+
+        def __call__(self, message: bytes) -> bytes:
+            return self.encryptor(self.prefix + message + self.suffix)
+
+    oracle = random_prefix_oracle()
 
     B = get_block_size(oracle)
     prefix_len, suffix_len = get_additional_message_len(oracle, B)
     assert(diagnose_mode(oracle, block_size=B, prefix_length=prefix_len) == "cbc")
     assert decrypt_suffix(oracle, suffix_len, prefix_len, B) == oracle.suffix
+
 
 def test_Challenge15():
     """
@@ -254,6 +257,7 @@ def test_Challenge15():
         strip_pkcs7(test_values[1], 16)
     with pytest.raises(PaddingError):
         strip_pkcs7(test_values[2], 16)
+
 
 def test_Challenge16():
     """

@@ -7,10 +7,11 @@ from cryptolib.utils.byteops import cyclical_xor
 from cryptolib.utils.conversion import hex_string_to_b64, b64_string_to_hex
 from cryptolib.utils.plain_scoring import ScrabbleScorer
 
-from cryptolib.blockciphers.chosen_cipher.oracles import DecryptECB
-from cryptolib.blockciphers.ciphertext_only.attacks import evidence_of_ECB
+from cryptolib.blockciphers.oracles import ECBoracle
+from cryptolib.blockciphers.attacks.ciphertext_only import evidence_of_ECB
 
 from .data import challenge04, challenge06, challenge07, challenge08
+
 
 def test_Challenge01():
     """
@@ -23,6 +24,7 @@ def test_Challenge01():
     input_str = '49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d'
     solution = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t'
     assert hex_string_to_b64(input_str) == solution
+
 
 def test_Challenge02():
     """
@@ -40,6 +42,7 @@ def test_Challenge02():
 
     assert cyclical_xor(key, message) == solution
 
+
 def test_Challenge03():
     """
     The hex encoded string: 
@@ -50,9 +53,11 @@ def test_Challenge03():
 
     How? Devise some method for "scoring" a piece of English plaintext. Character frequency is a good metric. Evaluate each output and choose the one with the best score. 
     """
-    cipher = bytes.fromhex('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
+    cipher = bytes.fromhex(
+        '1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
     solution = bytes(b"Cooking MC's like a pound of bacon")
     assert decrypt_single_byte_xor(cipher)[0], solution
+
 
 def test_Challenge04():
     """
@@ -73,8 +78,9 @@ def test_Challenge04():
         if (this_score := scorer.score(this_plain)) < best_score:
             plain = this_plain
             best_score = this_score
-    
+
     assert plain == solution
+
 
 def test_Challenge05():
     """
@@ -95,11 +101,13 @@ def test_Challenge05():
     plaintext = bytes(
         b"Burning 'em, if you ain't quick and nimble\n"
         b"I go crazy when I hear a cymbal"
-        )
+    )
     key = bytes(b'ICE')
-    solution = bytes.fromhex('0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f')
-    
+    solution = bytes.fromhex(
+        '0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f')
+
     assert cyclical_xor(key, plaintext) == solution
+
 
 def test_Challenge06():
     """
@@ -134,6 +142,7 @@ def test_Challenge06():
     plaintext = decrypt_repeating_key_xor(ciphertext, range(2, 40))[0]
     assert plaintext == solution
 
+
 def test_Challenge07():
     """
     The Base64-encoded content in this file has been encrypted via AES-128 in ECB mode under the key
@@ -151,8 +160,9 @@ def test_Challenge07():
     ciphertext = bytes.fromhex(b64_string_to_hex(challenge07.cipher))
     key = bytes(b'YELLOW SUBMARINE')
     solution = bytes(challenge07.solution)
-    oracle = DecryptECB('aes', key)
+    _, oracle = ECBoracle('aes', key)
     assert oracle(ciphertext) == solution
+
 
 def test_Challenge08():
     """

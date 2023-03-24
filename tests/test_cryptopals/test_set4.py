@@ -1,11 +1,13 @@
 import secrets
-import time
+
+from cryptolib.blockciphers.oracles import CBCoracle_KeyAsIV
 from cryptolib.hashes.SHA1 import sha1digest, sha1extend, sha1extend_message
 from cryptolib.hashes.MD4 import md4digest, md4extend, md4extend_message
 from cryptolib.hashes.MAC import prefixMAC, HMAC
 from cryptolib.utils.byteops import block_xor, reconstruct_from_str
 from .data import challenge25, challenge26, challenge27, challenge31
 from multiprocessing import Pool
+
 
 def test_challenge25():
     """
@@ -22,9 +24,10 @@ def test_challenge25():
     ciphertext = enc_disc.get_encrypted_data()
     enc_disc.edit(0, b'\x00'*len(ciphertext))
     keystream = enc_disc.get_encrypted_data()
-    
+
     plaintext = block_xor(keystream, ciphertext)
     assert plaintext == challenge25.plaintext
+
 
 def test_challenge26():
     """
@@ -44,12 +47,14 @@ def test_challenge26():
     nonce = ciphertext[:8]
     ciphertext = ciphertext[8:]
     for i in range(len(ciphertext) - len(send_message)):
-        message_mask = b'\x00'*i + xor_mask + b'\x00'*(len(ciphertext) - len(xor_mask) - i)
+        message_mask = b'\x00'*i + xor_mask + b'\x00' * \
+            (len(ciphertext) - len(xor_mask) - i)
         message = block_xor(ciphertext, message_mask)
         if server(nonce + message) == b"true":
             break
     else:
         assert False
+
 
 def test_challenge27():
     """
@@ -75,20 +80,24 @@ def test_challenge27():
 
     P'_1 XOR P'_3
     """
-    server, client = challenge27.create_server_client()
+    client, server = challenge27.create_server_client()
 
     message = b"a"*32
     ciphertext = client(message)
     try:
         # Add full ciphertext on the end so that padding works out.
-        server(ciphertext[:16] + b'\x00'*16 + ciphertext) 
+        server(ciphertext[:16] + b'\x00'*16 + ciphertext)
     except ValueError as vErr:
         errorMessage = vErr.args[0]
     prefix_len = len("Message ")
     suffix_len = len(" contains non-ascii characters!")
     plain = reconstruct_from_str(errorMessage[prefix_len:-suffix_len])
     key = block_xor(plain[:16], plain[32:48])
-    assert key == client._engine._key_schedule[:16]
+
+    client_clone, server_clone = CBCoracle_KeyAsIV(key)
+
+    assert client_clone(message) == ciphertext
+
 
 def test_challenge28():
     """
@@ -102,13 +111,14 @@ def test_challenge28():
 
     Verify that you cannot tamper with the message without breaking the MAC you've produced, and that you can't produce a new MAC without knowing the secret key.
     """
-    
+
     message = b'will this be authenticated?'
     sign, verify = prefixMAC(sha1digest, secrets.token_bytes(16))
     mac = sign(message)
     assert verify(message, mac)
     altered_message = block_xor(message, b'\x01'*len(message))
     assert not verify(altered_message, mac)
+
 
 def test_challenge29():
     key_len = 16
@@ -120,6 +130,7 @@ def test_challenge29():
     new_message = sha1extend_message(key_len, message, suffix)
     assert verify(new_message, new_mac)
 
+
 def test_challenge30():
     key_len = 16
     sign, verify = prefixMAC(md4digest, secrets.token_bytes(key_len))
@@ -129,6 +140,7 @@ def test_challenge30():
     new_mac = md4extend(mac, len(message) + key_len, suffix)
     new_message = md4extend_message(key_len, message, suffix)
     assert verify(new_message, new_mac)
+
 
 def test_challenge31():
     # _, verify = HMAC(sha1digest, secrets.token_bytes(key_len), sleep_time=0.01)
@@ -154,7 +166,7 @@ def test_challenge31():
             for t in times:
                 if t != max_time and max_time - t < eps:
                     count += 1
-                    continue # Times were too close to call, try again.
+                    continue  # Times were too close to call, try again.
             max_ind = times.index(max_time)
         signature[i] = max_ind
         # assert signature[i] == mac[i]

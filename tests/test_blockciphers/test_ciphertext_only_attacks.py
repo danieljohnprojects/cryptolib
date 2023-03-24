@@ -1,8 +1,9 @@
 import pytest
 import random
 
-from cryptolib.blockciphers.ciphertext_only.attacks import get_max_block_size, evidence_of_ECB
+from cryptolib.blockciphers.attacks.ciphertext_only import get_max_block_size, evidence_of_ECB
 from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC, EncryptECB
+
 
 def test_get_max_block_size():
     ciphertexts = [
@@ -15,6 +16,7 @@ def test_get_max_block_size():
         b'a'*48
     ]
     assert get_max_block_size(ciphertexts) == 16
+
 
 def test_evidence_of_ECB():
     rng = random.Random(12345)

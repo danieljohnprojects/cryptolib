@@ -7,14 +7,15 @@ import random
 from math import ceil
 
 from tests.test_prfs.test_MT19937 import test_int_seed, test_replicate_MT19937_state
-from cryptolib.blockciphers.chosen_plain.attacks import get_block_size
-from cryptolib.blockciphers.chosen_cipher.attacks import decrypt_padding_oracle_cbc
+from cryptolib.blockciphers.oracles import CBCoracle
+from cryptolib.blockciphers.attacks.chosen_plain import get_block_size
+from cryptolib.blockciphers.attacks.chosen_cipher import decrypt_padding_oracle_cbc
 from cryptolib.misc.two_time_pad import decrypt_two_time_pad
 from cryptolib.prfs import MT19937, BytesFromNumbers
 from cryptolib.streamciphers.algorithms import BlockCipherCTR
 from cryptolib.utils.byteops import block_xor
 from cryptolib.utils.padding import strip_pkcs7
-from .data import challenge17 , challenge19, challenge20, challenge24
+from .data import challenge17, challenge19, challenge20, challenge24
 
 
 def test_Challenge17():
@@ -61,12 +62,15 @@ def test_Challenge17():
 
     It is easy to get tripped up on the fact that CBC plaintexts are "padded". Padding oracles have nothing to do with the actual padding on a CBC plaintext. It's an attack that targets a specific bit of code that handles decryption. You can mount a padding oracle on any CBC block, whether it's padded or not.
     """
-    server, client = challenge17.create_server_client()
+    # Client encrypts, server decrypts
+    client, server = CBCoracle('aes')
     for message in challenge17.plaintexts:
         ciphertext = client(message)
         B = get_block_size(client)
-        decrypted = strip_pkcs7(decrypt_padding_oracle_cbc(server, ciphertext, B), B)
+        decrypted = strip_pkcs7(
+            decrypt_padding_oracle_cbc(server, ciphertext, B), B)
         assert decrypted == message
+
 
 def test_Challenge18():
     """
@@ -104,14 +108,16 @@ def test_Challenge18():
 
     Decrypt the string at the top of this function, then use your CTR function to encrypt and decrypt other things. 
     """
-    message = base64.b64decode(b'L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==')
+    message = base64.b64decode(
+        b'L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==')
 
     key = b'YELLOW SUBMARINE'
-    cipher =  BlockCipherCTR('aes', key, nonce_size=8, ctr_endianness='little')
+    cipher = BlockCipherCTR('aes', key, nonce_size=8, ctr_endianness='little')
     nonce = bytes(8)
     decrypted = cipher.decrypt(nonce + message)
 
     assert decrypted == b"Yo, VIP Let's kick it Ice, Ice, baby Ice, Ice, baby "
+
 
 def test_Challenge19():
     """
@@ -138,6 +144,7 @@ def test_Challenge19():
     for pt, message in zip(plaintexts, challenge19.messages):
         assert pt[:10] == message[:10]
 
+
 def test_Challenge20():
     """
     In this file find a similar set of Base64'd plaintext. Do with them exactly what you did with the first, but solve the problem differently.
@@ -155,6 +162,7 @@ def test_Challenge20():
     for pt, message in zip(plaintexts, challenge20.messages):
         assert pt[:10] == message[:10]
 
+
 def test_Challenge21():
     """    
     Implement the MT19937 Mersenne Twister RNG
@@ -164,6 +172,7 @@ def test_Challenge21():
     If you're writing in Python, Ruby, or (gah) PHP, your language is probably already giving you MT19937 as "rand()"; don't use rand(). Write the RNG yourself.
     """
     test_int_seed()
+
 
 def test_Challenge22():
     """
@@ -194,6 +203,7 @@ def test_Challenge22():
             seed_found = True
     assert seed_found
 
+
 def test_Challenge23():
     """
      The internal state of MT19937 consists of 624 32 bit integers.
@@ -212,6 +222,7 @@ def test_Challenge23():
     """
     test_replicate_MT19937_state()
 
+
 def test_Challenge24():
     """
     You can create a trivial stream cipher out of any PRNG; use it to generate a sequence of 8 bit outputs and call those outputs a keystream. XOR each byte of plaintext with each successive byte of keystream.
@@ -228,7 +239,7 @@ def test_Challenge24():
     """
     known_plaintext = b'a' * 14
 
-    seed_len = 2 # bytes
+    seed_len = 2  # bytes
 
     ciphertext = challenge24.oracle(known_plaintext)
 
@@ -244,5 +255,5 @@ def test_Challenge24():
             break
     else:
         raise RuntimeError(f"Seed {challenge24.secret_key} not found!")
-    
-    assert challenge24.secret_key ==  test_seed.to_bytes(seed_len, 'little')
+
+    assert challenge24.secret_key == test_seed.to_bytes(seed_len, 'little')

@@ -1,8 +1,6 @@
 import secrets
 
 from base64 import b64decode
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptCBC
-from cryptolib.blockciphers.chosen_cipher.oracles import PaddingCBC
 
 plaintexts = [
     b"MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
@@ -18,9 +16,3 @@ plaintexts = [
 ]
 
 plaintexts = list(map(b64decode, plaintexts))
-
-def create_server_client():
-    key = secrets.token_bytes(24)
-    client = EncryptCBC('aes', key)
-    server = PaddingCBC('aes', key)
-    return server, client

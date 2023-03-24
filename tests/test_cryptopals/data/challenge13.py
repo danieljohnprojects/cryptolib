@@ -1,5 +1,4 @@
-from cryptolib.blockciphers.chosen_plain.oracles import EncryptECB
-from cryptolib.blockciphers.chosen_cipher.oracles import DecryptECB
+from cryptolib.blockciphers.oracles import ECBoracle
 
 import re
 import secrets
@@ -23,25 +22,19 @@ def parse_dict(message: bytes) -> bytes:
 
 
 def create_server_client():
-    key = secrets.token_bytes(32)
-    class client:
-        def __init__(self):
-            self.prefix = b'email='
-            self.suffix = b'&UID=10&role=user'
-            self.quote_chars = b'=&'
-            self.engine = EncryptECB('aes', key)
-        
-        def __call__(self, message: bytes) -> bytes:
-            for c in self.quote_chars:
-                b = bytes([c])
-                message = message.replace(b, b'"' + b + b'"')
-            return self.engine(self.prefix + message + self.suffix)
+    enc, dec = ECBoracle('aes')
 
-    class server:
-        def __init__(self):
-            self.engine = DecryptECB('aes', key)
-        def __call__(self, ciphertext: bytes) -> bytes:
-            message = self.engine(ciphertext)
-            return parse_dict(message)
-    
-    return server(), client()
+    def client(message):
+        prefix = b'email='
+        suffix = b'&UID=10&role=user'
+        quote_chars = b'=&'
+        for c in quote_chars:
+            b = bytes([c])
+            message = message.replace(b, b'"' + b + b'"')
+        return enc(prefix + message + suffix)
+
+    def server(ciphertext: bytes) -> bytes:
+        message = dec(ciphertext)
+        return parse_dict(message)
+
+    return server, client
