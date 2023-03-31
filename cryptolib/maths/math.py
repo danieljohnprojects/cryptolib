@@ -1,7 +1,9 @@
 from functools import reduce
 from math import gcd
+from typing import Tuple
 
-def xgcd(a: int,b: int) -> int:
+
+def xgcd(a: int, b: int) -> Tuple[int, int, int]:
     """
     Computes the gcd of a and b along with numbers x and y such that xa+yb=gcd(a,b).
     """
@@ -18,6 +20,7 @@ def xgcd(a: int,b: int) -> int:
     assert a*old_s + b*old_t == old_r
     return old_r, old_s, old_t
 
+
 def CRT(remainders: list[int], moduli: list[int]) -> int:
     """
     Given a list of remainders and a list of moduli (all of which are coprime), computes a number which satisfies the congruences:
@@ -30,8 +33,9 @@ def CRT(remainders: list[int], moduli: list[int]) -> int:
     assert gcd(*moduli) == 1
     prod = reduce(int.__mul__, moduli)
     xs = [xgcd(m, prod//m)[2] * (prod//m) for m in moduli]
-    x = sum([x*r for x,r in zip(xs, remainders)])
-    return x%prod
+    x = sum([x*r for x, r in zip(xs, remainders)])
+    return x % prod
+
 
 def Legendre_symbol(x: int, p: int) -> int:
     """
@@ -43,6 +47,7 @@ def Legendre_symbol(x: int, p: int) -> int:
     """
     return pow(x, (p-1)//2, p)
 
+
 def sqrt_modulo(x: int, p: int) -> int:
     """
     Computes the square root of x modulo a prime p. Currently only works if p is congruent to 3 mod 4.
@@ -53,24 +58,24 @@ def sqrt_modulo(x: int, p: int) -> int:
     """
     assert Legendre_symbol(x, p) == 1
 
-    if p%4 == 3:
+    if p % 4 == 3:
         return pow(x, (p+1)//4, p)
-    
+
     # Write p = q2^s + 1
     q = p - 1
     s = 0
-    while not q%2:
+    while not q % 2:
         s += 1
         q = q//2
-    
+
     # Find z in Z_p which is a quadractic non-residue
     z = 2
     while Legendre_symbol(z, p) == 1:
         z = (z + 1) % p
-    
+
     M = s
     c = z**q
     t = x**q
     R = x**((q+1)//2)
-    
+
     raise NotImplementedError
