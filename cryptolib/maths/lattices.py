@@ -57,7 +57,14 @@ def size_reduce(B, L):
     nRows, nCols = np.shape(L)
     for row in range(1, nRows):
         for col in range(row):
-            mu = round(L[row, col] / L[col, col])
+            mu = L[row, col] / L[col, col]
+            if np.isinf(mu):
+                # If we reach this point
+                print("Divide by zero!", L)
+                raise RuntimeError(
+                    "Something bad happened and I don't fully understand it.")
+                continue
+            mu = round(mu)
             B[row] -= mu*B[col]
             L[row] -= mu*L[col]
             # This probably looks a bit strange since B[col] is a row of the matrix.
